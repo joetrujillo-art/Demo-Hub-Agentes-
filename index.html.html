@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBVA · Gestor de Agentes — MVP completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --e:#001391; --m:#070E46; --sand:#F7F8F8;
+  --lime:#88E783; --mand:#FFB56B; --aqua:#8BE1E9; --purp:#9694FF;
+  --w:#fff; --border:#E2E8F0; --muted:#5C6A8A;
+  --green:#1A9E6E; --amber:#D97706; --red:#C8283A;
+  --blue-light:#E8EBFF;
+  --r8:8px; --r12:12px; --r16:16px; --r20:20px;
+  --sh:0 1px 3px rgba(7,14,70,.06),0 4px 16px rgba(7,14,70,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'Lato',sans-serif;background:var(--sand);color:var(--m);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
+
+/* TOPBAR */
+#topbar{height:56px;background:var(--m);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;z-index:100;overflow:visible}
+#tb-logo{cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:12px;flex-shrink:0}
+#tb-logo img{display:block;height:22px}
+#tb-logo .divider{width:1px;height:24px;background:rgba(255,255,255,.18)}
+#tb-logo .lbl{font-size:12px;color:rgba(255,255,255,.85);font-weight:700;line-height:1.3}
+#tb-logo .sub{font-size:10px;color:rgba(255,255,255,.4)}
+#cat-nav{display:flex;align-items:center;gap:2px;margin-left:10px}
+.nv{position:relative}
+.nv-label{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r8);color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none}
+.nv-label::after{content:'▾';font-size:9px;opacity:.5;margin-left:1px}
+.nv:hover .nv-label,.nv.active .nv-label{color:#fff;background:rgba(255,255,255,.09)}
+.nv.active .nv-label{color:var(--aqua);background:rgba(139,225,233,.12)}
+.dd{position:absolute;top:100%;left:0;background:var(--w);border-radius:var(--r16);box-shadow:0 8px 32px rgba(7,14,70,.16);border:1px solid var(--border);padding:14px 6px 6px;min-width:230px;z-index:600;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;pointer-events:none}
+.nv.dd-open .dd{opacity:1;visibility:visible;transform:translateY(0);pointer-events:all}
+.dd::before{content:'';position:absolute;top:5px;left:18px;width:10px;height:10px;background:var(--w);border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg)}
+.dd-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r8);cursor:pointer;transition:background .12s}
+.dd-item:hover,.dd-item.active-item{background:rgba(0,19,145,.06)}
+.dd-dot{width:32px;height:32px;border-radius:var(--r8);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.dd-name{font-size:13px;font-weight:700;color:var(--m);line-height:1.2}
+.dd-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.dd-badge-r{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:20px}
+.tb-spacer{flex:1}
+#tb-search{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 8px 5px 12px;transition:border-color .15s}
+#tb-search:focus-within{border-color:var(--aqua);background:rgba(139,225,233,.12)}
+#tb-search input{background:transparent;border:none;color:#fff;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;outline:none;width:158px}
+#tb-search input::placeholder{color:rgba(255,255,255,.4);font-weight:400}
+@media(max-width:1100px){#tb-search{display:none}}
+.tb-icon{width:32px;height:32px;border-radius:var(--r8);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:background .15s;position:relative}
+.tb-icon:hover{background:rgba(255,255,255,.12)}
+.tb-notif::after{content:'3';position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:9px;font-weight:900;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--m)}
+/* role selector */
+#role-sel{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 6px 4px 12px;cursor:pointer}
+#role-sel .rs-lbl{font-size:11px;color:rgba(255,255,255,.55);font-weight:700}
+#role-sel select{background:transparent;border:none;color:#fff;font-weight:700;font-size:12px;font-family:Lato,sans-serif;outline:none;cursor:pointer}
+#role-sel select option{color:var(--m)}
+.tb-avatar{width:32px;height:32px;border-radius:50%;background:var(--e);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--sand);font-size:11px;cursor:pointer}
+
+#scroll{flex:1;overflow-y:auto}
+
+/* HUB */
+#hub{padding:28px}
+.hub-hero{margin-bottom:24px}
+.hub-hero h1{font-family:'Nunito Sans',sans-serif;font-size:26px;font-weight:700;color:var(--m);margin-bottom:6px}
+.hub-hero .hero-sub{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hub-hero .hero-sub span{font-size:13px;color:var(--muted)}
+.hub-status{display:inline-flex;align-items:center;gap:6px;background:var(--w);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700}
+.hub-status .sdot{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:pa 2s infinite}
+@keyframes pa{0%,100%{opacity:1}50%{opacity:.3}}
+.bento-mvp{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.tile{background:var(--w);border:1px solid var(--border);border-radius:var(--r20);padding:22px;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.tile:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(7,14,70,.11);border-color:rgba(0,19,145,.25)}
+.tile::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:var(--r20) var(--r20) 0 0}
+.tile.blue::before{background:var(--e)}.tile.lime::before{background:var(--lime)}.tile.aqua::before{background:var(--aqua)}.tile.red::before{background:var(--red)}.tile.purp::before{background:var(--purp)}.tile.mand::before{background:var(--mand)}
+.tile-dot{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-bottom:14px}
+.dot-e{background:rgba(0,19,145,.1)}.dot-lime{background:rgba(136,231,131,.2)}.dot-aqua{background:rgba(139,225,233,.2)}.dot-red{background:rgba(200,40,58,.1)}.dot-purp{background:rgba(150,148,255,.18)}.dot-mand{background:rgba(255,181,107,.2)}
+.tile-label{font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.tile-val{font-family:'Nunito Sans',sans-serif;font-size:38px;font-weight:700;color:var(--m);line-height:1}
+.tile-val.red{color:var(--red)}
+.tile-sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+.tile-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tch{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800}
+.tch-g{background:rgba(136,231,131,.15);color:#156B32}.tch-r{background:rgba(200,40,58,.1);color:var(--red)}.tch-a{background:rgba(255,181,107,.15);color:#9A4E00}
+.tile-cta{margin-top:auto;padding-top:12px;font-size:12px;font-weight:700;color:var(--e)}
+.kpi-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;flex:1}
+.kpi-mini{background:var(--sand);border-radius:var(--r8);padding:10px 12px}
+.km-label{font-size:9px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.km-val{font-family:'Nunito Sans',sans-serif;font-size:22px;font-weight:700;color:var(--m);line-height:1}
+
+/* SECTIONS */
+#section-wrap{display:none;flex:1;overflow-y:auto}
+.sec{display:none;padding:28px}
+.sec.active{display:block}
+.sec-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.sec-hero h2{font-family:'Nunito Sans',sans-serif;font-size:24px;font-weight:700;color:var(--m);line-height:1.05;margin-bottom:4px}
+.sec-hero p{font-size:13px;color:var(--muted)}
+.sec-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;align-items:center}
+
+.card{background:var(--w);border:1px solid var(--border);border-radius:var(--r16);padding:22px;margin-bottom:16px;box-shadow:var(--sh)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+.card-header h2{font-family:'Nunito Sans',sans-serif;font-size:16px;font-weight:700;color:var(--m)}
+.grid{display:grid;gap:16px}
+.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:1100px){.g4,.g5{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--w);border:1px solid var(--border);border-radius:var(--r16);padding:18px 20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--e);border-radius:var(--r16) var(--r16) 0 0}
+.stat-card.green::after{background:var(--lime)}.stat-card.amber::after{background:var(--mand)}.stat-card.red::after{background:var(--red)}.stat-card.aqua::after{background:var(--aqua)}.stat-card.purp::after{background:var(--purp)}
+.s-label{font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.s-val{font-family:'Nunito Sans',sans-serif;font-size:30px;font-weight:700;color:var(--m);line-height:1}
+.s-sub{font-size:12px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 14px;font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--border);background:var(--sand)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,19,145,.025)}
+tr:last-child td{border-bottom:none}
+.tbl-wrap{overflow-x:auto}
+.tlink{color:var(--e);font-weight:700;cursor:pointer}
+.tlink:hover{text-decoration:underline}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-green{background:rgba(136,231,131,.15);color:#156B32}.b-red{background:rgba(200,40,58,.1);color:var(--red)}.b-amber{background:rgba(255,181,107,.18);color:#9A4E00}.b-gray{background:rgba(92,106,138,.1);color:var(--muted)}.b-blue{background:rgba(0,19,145,.08);color:var(--e)}.b-purp{background:rgba(150,148,255,.18);color:#4B49C7}.b-aqua{background:rgba(139,225,233,.2);color:#0E7C8A}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r8);border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Lato',sans-serif}
+.btn-p{background:var(--e);color:var(--sand)}.btn-p:hover{background:#001080}
+.btn-s{background:var(--w);color:var(--m);border:1.5px solid var(--border)}.btn-s:hover{border-color:var(--e);color:var(--e)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#a81f30}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-on{background:rgba(26,158,110,.1);color:var(--green);border:1.5px solid rgba(26,158,110,.3);border-radius:var(--r8);padding:5px 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all .15s;font-family:'Lato',sans-serif}
+.btn-on:hover{background:var(--green);color:var(--w)}
+.btn-off{background:rgba(200,40,58,.08);color:var(--red);border:1.5px solid rgba(200,40,58,.2);border-radius:var(--r8);padding:5px 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all .15s;font-family:'Lato',sans-serif}
+.btn-off:hover{background:var(--red);color:var(--w)}
+.btn-ghost{background:none;border:none;color:var(--e);font-weight:700;cursor:pointer;font-size:12px;font-family:Lato,sans-serif}
+
+input.inp,select.inp,textarea.inp{border:1.5px solid var(--border);border-radius:var(--r8);padding:9px 12px;font-size:13px;color:var(--m);background:var(--w);outline:none;transition:border-color .15s;font-family:'Lato',sans-serif;width:100%}
+input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--e)}
+textarea.inp{resize:vertical;min-height:72px}
+
+.fw7{font-weight:700}.fw9{font-weight:900}.tmuted{color:var(--muted)}.tsm{font-size:12px}
+.chip{display:inline-flex;align-items:center;background:rgba(0,19,145,.07);color:var(--e);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.skill-chip{display:inline-flex;align-items:center;background:rgba(139,225,233,.18);color:#0E7C8A;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;margin:3px}
+.alert-item{display:flex;gap:12px;padding:14px 16px;border-radius:var(--r12);margin-bottom:8px;border:1px solid}
+.ai-danger{background:rgba(200,40,58,.04);border-color:rgba(200,40,58,.2)}.ai-warn{background:rgba(255,181,107,.06);border-color:rgba(255,181,107,.25)}.ai-info{background:rgba(0,19,145,.04);border-color:rgba(0,19,145,.12)}.ai-ok{background:rgba(136,231,131,.06);border-color:rgba(136,231,131,.25)}
+.ai-title{font-weight:700;font-size:13px;color:var(--m);margin-bottom:3px}
+.ai-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.ai-time{font-size:11px;color:var(--muted);margin-top:5px;font-weight:700}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,14,70,.55);z-index:200;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--w);border-radius:var(--r20);width:100%;max-width:520px;border:1px solid var(--border);box-shadow:0 24px 64px rgba(7,14,70,.18)}
+.modal.wide{max-width:880px}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.mh h2{font-family:'Nunito Sans',sans-serif;font-size:17px;font-weight:700;color:var(--m)}
+.mb-p{padding:24px}
+.mf{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:var(--sand);border-radius:0 0 var(--r20) var(--r20)}
+.mclose{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+.lat-bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-top:6px}
+.lat-fill{height:100%;border-radius:4px;transition:width .4s}
+.lat-good{background:var(--lime)}.lat-warn{background:var(--mand)}.lat-bad{background:var(--red)}
+.mvp-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(0,19,145,.1);color:var(--e);border:1px solid rgba(0,19,145,.2);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+
+/* FICHA 360 */
+.f360-head{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.f360-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:18px 0 0;flex-wrap:wrap}
+.f360-tab{padding:10px 16px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.f360-tab.active{color:var(--e);border-bottom-color:var(--e)}
+.f360-pane{display:none;padding-top:18px}.f360-pane.active{display:block}
+.kv{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 24px}
+.kv-row{display:flex;flex-direction:column;gap:2px}
+.kv-k{font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kv-v{font-size:14px;color:var(--m);font-weight:700}
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:4px;bottom:4px;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:0 0 18px 4px}
+.tl-item::before{content:'';position:absolute;left:-21px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--e);border:2px solid var(--w);box-shadow:0 0 0 2px var(--border)}
+.tl-item.done::before{background:var(--green)}
+.tl-t{font-weight:700;font-size:13px}.tl-d{font-size:12px;color:var(--muted)}
+
+/* WIZARD */
+.wz-steps{display:flex;gap:0;margin-bottom:22px;flex-wrap:wrap}
+.wz-step{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--muted);flex:1;min-width:90px}
+.wz-num{width:26px;height:26px;border-radius:50%;background:var(--sand);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.wz-step.active .wz-num{background:var(--e);color:#fff;border-color:var(--e)}
+.wz-step.done .wz-num{background:var(--green);color:#fff;border-color:var(--green)}
+.wz-step.active{color:var(--e)}
+.wz-pane{display:none}.wz-pane.active{display:block}
+.console{background:#0B1020;border-radius:var(--r12);padding:16px;font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#9CE6C4;white-space:pre-wrap;min-height:130px;line-height:1.6}
+.console .muted{color:#5C6A8A}.console .ok{color:#88E783}.console .key{color:#8BE1E9}
+
+/* HITL */
+.hitl-split{display:grid;grid-template-columns:320px 1fr;gap:16px}
+@media(max-width:980px){.hitl-split{grid-template-columns:1fr}}
+.hitl-item{padding:14px;border:1px solid var(--border);border-radius:var(--r12);margin-bottom:10px;cursor:pointer;transition:all .15s}
+.hitl-item:hover{border-color:var(--e)}
+.hitl-item.sel{border-color:var(--e);background:rgba(0,19,145,.03)}
+.hitl-item.resolved{opacity:.5}
+.code-box{background:#0B1020;border-radius:var(--r8);padding:14px;font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#9CE6C4;white-space:pre-wrap;line-height:1.5}
+
+/* AUDIT */
+.audit-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px dashed var(--border)}
+.audit-ic{width:34px;height:34px;border-radius:var(--r8);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;background:var(--sand)}
+.lvl-pill{font-size:10px;font-weight:900;padding:2px 8px;border-radius:20px}
+.lvl1{background:rgba(136,231,131,.2);color:#156B32}.lvl2{background:rgba(150,148,255,.2);color:#4B49C7}
+
+.no-perm{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;color:var(--muted)}
+.hide{display:none!important}
+.req-tag{font-size:9px;font-weight:900;color:var(--e);background:rgba(0,19,145,.07);padding:2px 7px;border-radius:6px;letter-spacing:.04em}
+/* login */
+#login-ov{position:fixed;inset:0;background:radial-gradient(circle at 30% 20%,#001391,#070E46);z-index:500;display:flex;align-items:center;justify-content:center}
+#login-ov.hide{display:none}
+.login-card{background:var(--w);border-radius:var(--r20);padding:40px 36px;width:380px;max-width:90vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.login-logo{width:54px;height:54px;border-radius:14px;background:var(--e);color:#fff;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.login-card select{width:100%;margin-bottom:14px}
+/* bulk + pager */
+.bulk-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,19,145,.05);border:1px solid rgba(0,19,145,.15);border-radius:var(--r8);margin:0 16px 0}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px}
+.pager button{border:1.5px solid var(--border);background:var(--w);border-radius:var(--r8);padding:5px 11px;font-weight:700;cursor:pointer;font-family:Lato}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cmp-col{border:1px solid var(--border);border-radius:var(--r12);padding:16px}
+.cmp-col.win{border-color:var(--green);background:rgba(26,158,110,.04)}
+.cmp-better{color:var(--green);font-weight:900}
+.mini-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.mini-charts{grid-template-columns:1fr}}
+
+/* ── ORQUESTACIÓN: REGISTRY / ROUTING / TRACEABILITY ── */
+.health-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.hd-active{background:var(--green)}.hd-degraded{background:var(--amber)}.hd-down{background:var(--red)}.hd-sandbox{background:#0E7C8A}
+.mono{font-family:'SF Mono',Menlo,monospace;font-size:12px}
+.endpoint{font-family:'SF Mono',Menlo,monospace;font-size:11px;color:var(--e);background:rgba(0,19,145,.05);padding:2px 7px;border-radius:6px}
+/* relationship graph */
+.rel-graph{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch}
+.rel-chain{display:flex;align-items:center;gap:0;flex-wrap:wrap;background:var(--sand);border:1px solid var(--border);border-radius:var(--r12);padding:16px}
+.rel-node{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:120px;cursor:pointer}
+.rel-box{background:var(--w);border:2px solid var(--e);border-radius:var(--r12);padding:10px 14px;text-align:center;transition:all .15s;min-width:120px}
+.rel-node:hover .rel-box{box-shadow:0 6px 18px rgba(7,14,70,.14);transform:translateY(-2px)}
+.rel-box.deg{border-color:var(--amber)}.rel-box.down{border-color:var(--red)}.rel-box.sbx{border-color:#0E7C8A}
+.rel-box .rb-name{font-weight:900;font-size:12px;color:var(--m)}
+.rel-box .rb-id{font-size:10px;color:var(--muted)}
+.rel-arrow{font-size:22px;color:var(--e);margin:0 4px;flex-shrink:0}
+.rel-arrow.v{transform:rotate(90deg)}
+/* routing simulator result */
+.sim-result{border:1px solid var(--border);border-radius:var(--r12);overflow:hidden}
+.sim-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sim-head.n1{background:rgba(136,231,131,.12);border-bottom:1px solid rgba(26,158,110,.25)}
+.sim-head.n2{background:rgba(150,148,255,.14);border-bottom:1px solid rgba(75,73,199,.25)}
+.sim-body{padding:18px}
+.confbar{height:10px;border-radius:5px;background:var(--border);overflow:hidden;margin-top:6px}
+.conffill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--aqua),var(--e));transition:width .5s}
+/* flow viewer (vertical timeline) */
+.flow{position:relative;padding-left:34px}
+.flow::before{content:'';position:absolute;left:15px;top:6px;bottom:6px;width:3px;background:linear-gradient(var(--e),var(--aqua))}
+.flow-node{position:relative;padding:0 0 16px 8px}
+.flow-node::before{content:'';position:absolute;left:-27px;top:2px;width:18px;height:18px;border-radius:50%;background:var(--w);border:3px solid var(--e);z-index:1}
+.flow-node.ok::before{border-color:var(--green);background:var(--green)}
+.flow-node.hitl::before{border-color:var(--amber);background:var(--amber)}
+.flow-node.run::before{border-color:var(--aqua);background:var(--aqua);animation:pa 1.4s infinite}
+.flow-card{background:var(--w);border:1px solid var(--border);border-radius:var(--r12);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.flow-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.flow-meta b{color:var(--m)}
+</style>
+</head>
+<body>
+<div id="login-ov">
+  <div class="login-card">
+    <div class="login-logo">BBVA</div>
+    <h2 style="font-family:'Nunito Sans',sans-serif;font-size:20px;color:var(--m);margin-bottom:4px">Gestor de Agentes</h2>
+    <p class="tsm tmuted" style="margin-bottom:22px">Prescription Business · MVP</p>
+    <label class="tsm tmuted" style="display:block;text-align:left;font-weight:900;text-transform:uppercase;font-size:10px;margin-bottom:5px">Entrar como (simulación de rol)</label>
+    <select class="inp" id="login-role">
+      <option value="ROL-01">Product Owner del Hub</option>
+      <option value="ROL-02">Product Owner de Dominio</option>
+      <option value="ROL-03">Gestor de Operaciones</option>
+      <option value="ROL-04">Analista de Negocio</option>
+      <option value="ROL-05">Riesgo / Compliance</option>
+    </select>
+    <button class="btn btn-p" style="width:100%;justify-content:center" onclick="doLogin()">Entrar con SSO corporativo</button>
+    <div class="tsm tmuted" style="margin-top:14px">🔒 Acceso vía IAM de BBVA · RBAC (NFR-04)</div>
+  </div>
+</div>
+<header id="topbar">
+  <a id="tb-logo" onclick="goHub()">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iOTYwLjAwMDAwMHB0IiBoZWlnaHQ9IjI4OC4wMDAwMDBwdCIgdmlld0JveD0iMCAwIDk2MC4wMDAwMDAgMjg4LjAwMDAwMCIKIHByZXNlcnZlQXNwZWN0UmF0aW89InhNaWRZTWlkIG1lZXQiPgoKPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4wMDAwMDAsMjg4LjAwMDAwMCkgc2NhbGUoMC4xMDAwMDAsLTAuMTAwMDAwKSIKZmlsbD0iI0Y3RjhGOCIgc3Ryb2tlPSJub25lIj4KPHBhdGggZD0iTTgyMTcgMjg2OCBjLTkgLTcgLTMwOSAtNTYzIC02NjcgLTEyMzYgLTU1MyAtMTAzOCAtNjQ5IC0xMjI1IC02NDAKLTEyNDIgMTAgLTE5IDIxIC0yMCAyMjkgLTIwIDE4NiAwIDIyMSAyIDIzMiAxNiA4IDggMjAxIDM3NCA0MjkgODEyIDQwNSA3NzkKNDE2IDc5NyA0NDYgODAwIDE3IDIgMzUgLTMgNDEgLTEwIDYgLTcgMTk0IC0zNjYgNDE4IC03OTggMjI0IC00MzIgNDE0IC03OTMKNDIzIC04MDMgMTMgLTE1IDM4IC0xNyAyMzMgLTE3IDIxMSAwIDIxOSAxIDIyOSAyMSAxMCAxOCAtNzQgMTgxIC02NDEgMTI0NwotMzU4IDY3NSAtNjU3IDEyMzAgLTY2MyAxMjM0IC0xNyAxMiAtNTAgOSAtNjkgLTR6Ii8+CjxwYXRoIGQ9Ik0xNiAyNTA1IGMtMTUgLTE1IC0xNiAtMTI1IC0xNiAtMTIzNiAwIC04MjIgMyAtMTIyNyAxMCAtMTI0MCAxMAotMTggMjggLTE5IDY1NiAtMTkgMzc4IDAgNjg1IDQgNzQyIDEwIDE0MiAxNiAyNTUgNDYgMzYyIDk3IDc4IDM4IDEwOSA1OSAxNzAKMTIyIDEyNSAxMjYgMTc3IDI1MyAxODcgNDYzIDcgMTQxIC03IDI0MiAtNTAgMzUzIC0yNiA2OSAtNDAgOTAgLTEwNiAxNTYgLTU3CjU3IC05NCA4NSAtMTQ4IDExMCAtNDAgMTkgLTczIDM2IC03MyAzOSAxIDMgMTkgMTYgNDEgMzAgOTMgNTYgMTg0IDE5NCAyMTQKMzIyIDM0IDE0MyAxMSAzMjcgLTU2IDQ1OSAtNzIgMTQzIC0yNDUgMjcyIC00MzAgMzIxIC04MiAyMSAtOTkgMjIgLTc4NSAyNQotNjM3IDQgLTcwMyAyIC03MTggLTEyeiBtMTM4NCAtMzc1IGM4NiAtMzEgMTU4IC0xMDIgMTgzIC0xNzkgMjEgLTY2IDIyIC0xNzEKMiAtMjM4IC0xOCAtNTkgLTgxIC0xMzUgLTEzNiAtMTYzIC04OCAtNDUgLTEzOSAtNTAgLTU4NiAtNTAgLTQwNyAwIC00MjMgMQotNDMzIDE5IC02IDEyIC0xMCAxMzAgLTEwIDMxNSAwIDI1OSAyIDI5NyAxNiAzMTEgMTUgMTUgNjEgMTYgNDU4IDEzIDQzNSAtNAo0NDIgLTQgNTA2IC0yOHogbS00IC0xMDA1IGMxMjAgLTIxIDE5NCAtNTYgMjUwIC0xMTggNTcgLTYzIDc4IC0xMzEgNzggLTI1MgowIC0yMzAgLTk4IC0zMzYgLTM0MiAtMzc0IC0xMDMgLTE2IC05NDQgLTE1IC05NjAgMSAtOSA5IC0xMiAxMDYgLTEyIDM3NSAwCjMzNCAxIDM2MyAxOCAzNzIgMTEgNyAxNzQgMTEgNDQ4IDExIDM0NSAwIDQ0OSAtMyA1MjAgLTE1eiIvPgo8cGF0aCBkPSJNMjU1NiAyNTA1IGMtMTUgLTE1IC0xNiAtMTIzIC0xNiAtMTI0MCAwIC0xMDk5IDIgLTEyMjUgMTYgLTEyMzkgMTQKLTE0IDg3IC0xNiA2NTQgLTE2IDM5OSAwIDY3OCA0IDc0MiAxMSAzMzUgMzYgNTQ0IDE1OSA2NDcgMzc5IDU1IDExOCA2NiAxNzgKNjYgMzU1IC0xIDE4MyAtMTMgMjM0IC04NyAzNjAgLTU0IDkwIC0xMTggMTUxIC0yMTIgMjAwIC00MiAyMiAtNzYgNDMgLTc2IDQ3CjAgNCAxMCAxMCAyMSAxMyAxMiA0IDUyIDM3IDg5IDc0IDczIDczIDExOSAxNTUgMTQ1IDI1NiAxNyA2NiAyMCAyMTcgNiAyOTEKLTQ1IDIzOCAtMjMwIDQyMSAtNDk5IDQ5NyAtNzUgMjEgLTk2IDIxIC03NzggMjUgLTYzNyAzIC03MDMgMiAtNzE4IC0xM3oKbTEzMjggLTM2MCBjMTI0IC0yNiAyMTIgLTEwMCAyNDMgLTIwNCAyMCAtNzIgMTQgLTE5OSAtMTQgLTI2MSAtMzggLTg3IC0xMjYKLTE0OCAtMjQzIC0xNzAgLTc5IC0xNSAtODkzIC0xMyAtOTA4IDIgLTE3IDE3IC0xNyA2MTkgMCA2MzYgMTkgMTkgODMwIDE2CjkyMiAtM3ogbTEyNiAtMTAzNCBjMTIzIC0zNyAxOTQgLTk1IDIzMiAtMTkxIDMxIC04MSAzMSAtMjUxIC0yIC0zMzQgLTQzCi0xMTIgLTEzMiAtMTcxIC0zMDAgLTIwMiAtMTAyIC0xOCAtOTYwIC0yMCAtOTc4IC0yIC0xOCAxOCAtMTcgNzI5IDEgNzQ3IDkKMTAgMTE1IDExIDQ5MiA4IDQ2MyAtMyA0ODMgLTQgNTU1IC0yNnoiLz4KPHBhdGggZD0iTTQ3MTAgMjUxMCBjLTE5IC0xMiAtNzUgOTcgNjY4IC0xMzAwIDY3MyAtMTI2NSA2NTUgLTEyMzMgNzAxIC0xMTg1CjEwIDExIDMxMCA1NjkgNjY2IDEyMzkgNTAzIDk0OCA2NDYgMTIyMyA2MzggMTIzNSAtOSAxNCAtNDIgMTYgLTIyNiAxOSAtMjE1CjIgLTIxNiAyIC0yMzEgLTIwIC04IC0xMyAtMTk5IC0zNzIgLTQyNCAtNzk4IC00MjAgLTc5NCAtNDM3IC04MjEgLTQ3OCAtNzk1Ci04IDYgLTIwMyAzNjQgLTQzMiA3OTYgLTIyOSA0MzMgLTQyMyA3OTQgLTQzMSA4MDMgLTEyIDE0IC00MiAxNiAtMjI2IDE2Ci0xMTYgMCAtMjE4IC01IC0yMjYgLTEweiIvPgo8L2c+Cjwvc3ZnPgo=" height="22" alt="BBVA">
+    <div class="divider"></div>
+    <div><div class="lbl">Gestor de Agentes</div><div class="sub">Prescription Business &middot; MVP</div></div>
+  </a>
+  <nav id="cat-nav">
+    <div class="nv" id="nv-obs">
+      <div class="nv-label">Observatorio</div>
+      <div class="dd">
+        <div class="dd-item" id="ddi-dashboard" onclick="goSection('dashboard')"><div class="dd-dot" style="background:rgba(0,19,145,.08)">&#128202;</div><div><div class="dd-name">Dashboard</div><div class="dd-sub">Estado del ecosistema</div></div></div>
+        <div class="dd-item" id="ddi-alertas" onclick="goSection('alertas')"><div class="dd-dot" style="background:rgba(200,40,58,.08)">&#128276;</div><div><div class="dd-name">Alertas y errores</div><div class="dd-sub">Caídas y degradaciones</div></div><span class="dd-badge-r">3</span></div>
+        <div class="dd-item" id="ddi-metricas" onclick="goSection('metricas')"><div class="dd-dot" style="background:rgba(139,225,233,.15)">&#128200;</div><div><div class="dd-name">Métricas y rendimiento</div><div class="dd-sub">Latencia · éxito · HITL · errores</div></div></div>
+      </div>
+    </div>
+    <div class="nv" id="nv-agt">
+      <div class="nv-label">Agentes</div>
+      <div class="dd">
+        <div class="dd-item" id="ddi-catalogo" onclick="goSection('catalogo')"><div class="dd-dot" style="background:rgba(136,231,131,.15)">&#128193;</div><div><div class="dd-name">Catálogo de agentes</div><div class="dd-sub">Inventario · Ficha 360 · On/Off</div></div></div>
+        <div class="dd-item" id="ddi-onboarding" onclick="goSection('onboarding')" data-perm="onboarding"><div class="dd-dot" style="background:rgba(150,148,255,.15)">&#10133;</div><div><div class="dd-name">Incorporar agente</div><div class="dd-sub">Asistente de onboarding (8 pasos)</div></div></div>
+        <div class="dd-item" id="ddi-prospectos" onclick="goSection('prospectos')"><div class="dd-dot" style="background:rgba(139,225,233,.15)">&#128270;</div><div><div class="dd-name">Prospectos (Registry)</div><div class="dd-sub">Candidatos detectados · pipeline</div></div></div>
+      </div>
+    </div>
+    <div class="nv" id="nv-gov">
+      <div class="nv-label">Gobierno</div>
+      <div class="dd">
+        <div class="dd-item" id="ddi-hitl" onclick="goSection('hitl')" data-perm="hitl"><div class="dd-dot" style="background:rgba(255,181,107,.15)">&#9995;</div><div><div class="dd-name">Bandeja HITL</div><div class="dd-sub">Revisión humana de flujos</div></div><span class="dd-badge-r" id="hitl-badge">2</span></div>
+        <div class="dd-item" id="ddi-aprobaciones" onclick="goSection('aprobaciones')" data-perm="aprobar"><div class="dd-dot" style="background:rgba(0,19,145,.08)">&#9989;</div><div><div class="dd-name">Centro de aprobaciones</div><div class="dd-sub">Maker-Checker · operaciones críticas</div></div><span class="dd-badge-r" id="appr-badge" style="display:none">0</span></div>
+        <div class="dd-item" id="ddi-audit" onclick="goSection('audit')"><div class="dd-dot" style="background:rgba(0,19,145,.08)">&#128269;</div><div><div class="dd-name">Audit Trail</div><div class="dd-sub">Trazabilidad por trace_id</div></div></div>
+        <div class="dd-item" id="ddi-log" onclick="goSection('log')"><div class="dd-dot" style="background:rgba(92,106,138,.1)">&#128203;</div><div><div class="dd-name">Log de operaciones</div><div class="dd-sub">Encendidos y apagados</div></div></div>
+      </div>
+    </div>
+    <div class="nv" id="nv-orq">
+      <div class="nv-label">Orquestación</div>
+      <div class="dd">
+        <div class="dd-item" id="ddi-registry" onclick="goSection('registry')"><div class="dd-dot" style="background:rgba(0,19,145,.08)">&#129518;</div><div><div class="dd-name">Agent Registry</div><div class="dd-sub">Descubrimiento · Agent Cards · salud</div></div></div>
+        <div class="dd-item" id="ddi-routing" onclick="goSection('routing')"><div class="dd-dot" style="background:rgba(150,148,255,.15)">&#128256;</div><div><div class="dd-name">Routing Center</div><div class="dd-sub">Nivel 1 determinista · Nivel 2 LLM</div></div></div>
+        <div class="dd-item" id="ddi-traceability" onclick="goSection('traceability')"><div class="dd-dot" style="background:rgba(139,225,233,.15)">&#128279;</div><div><div class="dd-name">Traceability Center</div><div class="dd-sub">Flujo A2A · handoffs · trace_id</div></div></div>
+      </div>
+    </div>
+  </nav>
+  <div class="tb-spacer"></div>
+  <div id="tb-search" title="Buscar trace_id en el Traceability Center">
+    <span style="opacity:.55;font-size:12px">&#128269;</span>
+    <input id="tb-trace" placeholder="Buscar trace_id… (TRC-7F3A21)" onkeydown="globalTraceSearch(event)" autocomplete="off">
+  </div>
+  <div id="role-sel" title="Simulación de rol (RBAC)">
+    <span class="rs-lbl">Rol:</span>
+    <select id="role-select" onchange="changeRole()">
+      <option value="ROL-01">Product Owner del Hub</option>
+      <option value="ROL-02">Product Owner de Dominio</option>
+      <option value="ROL-03">Gestor de Operaciones</option>
+      <option value="ROL-04">Analista de Negocio</option>
+      <option value="ROL-05">Riesgo / Compliance</option>
+    </select>
+  </div>
+  <div class="tb-icon tb-notif" onclick="goSection('alertas')" title="Alertas">&#128276;</div>
+  <div class="tb-avatar" id="tb-avatar" title="Carlos Méndez">CM</div>
+</header>
+<div id="scroll">
+
+<!-- HUB -->
+<div id="hub">
+  <div class="hub-hero">
+    <h1>Buenos días, <span id="hub-user">Carlos</span> <span class="mvp-pill" style="margin-left:8px;vertical-align:middle">MVP · Fase 1</span></h1>
+    <div class="hero-sub">
+      <span>Lunes, 18 de mayo de 2026</span>
+      <div class="hub-status"><div class="sdot"></div><span>Ecosistema en atención · 3 alertas activas</span></div>
+      <span class="req-tag" id="hub-role-tag">Rol: Product Owner del Hub</span>
+    </div>
+  </div>
+  <div class="bento-mvp">
+    <div class="tile blue" style="grid-column:span 2" onclick="goSection('dashboard')">
+      <div class="tile-dot dot-e">🌐</div>
+      <div class="tile-label">Estado del ecosistema</div>
+      <div class="kpi-mini-grid">
+        <div class="kpi-mini"><div class="km-label">Total agentes</div><div class="km-val" id="h-total">—</div></div>
+        <div class="kpi-mini"><div class="km-label">Activos</div><div class="km-val" id="h-act" style="color:var(--green)">—</div></div>
+        <div class="kpi-mini"><div class="km-label">En sandbox / cert.</div><div class="km-val" id="h-sbx">—</div></div>
+        <div class="kpi-mini"><div class="km-label">Ahorro estimado</div><div class="km-val">€1.8M</div></div>
+      </div>
+      <div class="tile-cta">Ver dashboard →</div>
+    </div>
+    <div class="tile lime" onclick="goSection('catalogo')">
+      <div class="tile-dot dot-lime">🗂️</div><div class="tile-label">Catálogo</div>
+      <div class="tile-val" id="h-cat">—</div><div class="tile-sub">Agentes · Ficha 360 · On/Off</div>
+      <div class="tile-cta">Gestionar agentes →</div>
+    </div>
+    <div class="tile mand" onclick="goSection('hitl')" data-perm="hitl">
+      <div class="tile-dot dot-mand">✋</div><div class="tile-label">Bandeja HITL</div>
+      <div class="tile-val" id="h-hitl">2</div><div class="tile-sub">Pendientes de revisión humana</div>
+      <div class="tile-cta">Revisar →</div>
+    </div>
+    <div class="tile purp" onclick="goSection('onboarding')" data-perm="onboarding">
+      <div class="tile-dot dot-purp">➕</div><div class="tile-label">Incorporación</div>
+      <div class="tile-val" style="font-size:26px;padding-top:8px">Nuevo agente</div><div class="tile-sub">Asistente guiado de 8 pasos</div>
+      <div class="tile-cta">Iniciar onboarding →</div>
+    </div>
+    <div class="tile red" onclick="goSection('alertas')">
+      <div class="tile-dot dot-red">🔔</div><div class="tile-label">Alertas activas</div>
+      <div class="tile-val red">3</div><div class="tile-sub">Errores, caídas y degradaciones</div>
+      <div class="tile-cta">Ver alertas →</div>
+    </div>
+    <div class="tile aqua" onclick="goSection('audit')">
+      <div class="tile-dot dot-aqua">🔍</div><div class="tile-label">Audit Trail</div>
+      <div class="tile-val" style="font-size:26px;padding-top:8px">trace_id</div><div class="tile-sub">Trazabilidad regulatoria de decisiones</div>
+      <div class="tile-cta">Consultar →</div>
+    </div>
+    <div class="tile blue" onclick="goSection('registry')">
+      <div class="tile-dot dot-e">🧩</div><div class="tile-label">Agent Registry</div>
+      <div class="tile-val" id="h-reg">—</div><div class="tile-sub">Agentes registrados · Agent Cards · A2A</div>
+      <div class="tile-cta">Explorar registry →</div>
+    </div>
+    <div class="tile purp" onclick="goSection('routing')">
+      <div class="tile-dot dot-purp">🔀</div><div class="tile-label">Routing Center</div>
+      <div class="tile-val" id="h-route">—</div><div class="tile-sub">Decisiones de enrutamiento hoy (N1+N2)</div>
+      <div class="tile-cta">Simular routing →</div>
+    </div>
+    <div class="tile aqua" onclick="goSection('traceability')">
+      <div class="tile-dot dot-aqua">🔗</div><div class="tile-label">Traceability</div>
+      <div class="tile-val" id="h-trace">—</div><div class="tile-sub">Trazas A2A activas con handoffs</div>
+      <div class="tile-cta">Ver flujos →</div>
+    </div>
+  </div>
+</div>
+
+<div id="section-wrap">
+
+<!-- DASHBOARD -->
+<div id="sec-dashboard" class="sec">
+  <div class="sec-hero"><div><h2>Dashboard ejecutivo <span class="req-tag">DASH-01..06</span></h2><p>Estado operativo y de gobierno del ecosistema · MVP Fase 1</p></div></div>
+  <div class="grid g5" style="margin-bottom:16px" id="dash-stats"></div>
+  <div class="card" style="padding:18px 20px;margin-bottom:16px">
+    <div class="card-header" style="margin-bottom:14px"><h2>Orquestación en vivo <span class="req-tag">HUB · A2A</span></h2><span class="tsm tmuted">Registry · Routing · Traceability</span></div>
+    <div class="grid g4" id="dash-orq"></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-header"><h2>Latencia media del ecosistema</h2><span class="tsm tmuted">Tiempo de respuesta (ms)</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px"><span style="font-family:'Nunito Sans',sans-serif;font-size:46px;font-weight:700;color:var(--m)">187</span><span style="font-size:15px;color:var(--muted);font-weight:700">ms</span><span class="badge b-green">↓ 8ms vs ayer</span></div>
+      <div style="height:190px;position:relative"><canvas id="ch-lat-trend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Distribución por dominio</h2></div>
+      <div style="height:240px;position:relative"><canvas id="ch-dist"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Distribución del parque <span class="req-tag">DASH-02</span></h2><span class="tsm tmuted">Por país, origen y tipología</span></div>
+    <div class="mini-charts">
+      <div style="height:200px;position:relative"><canvas id="ch-pais"></canvas></div>
+      <div style="height:200px;position:relative"><canvas id="ch-origen"></canvas></div>
+      <div style="height:200px;position:relative"><canvas id="ch-tipo"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="card-header"><h2>Estado del parque</h2><span class="tsm tmuted">Click en un agente para abrir su Ficha 360</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Agente</th><th>País</th><th>Dominio</th><th>Origen</th><th>Estado</th><th>Latencia</th><th>Éxito</th><th>Acción</th></tr></thead><tbody id="dash-table"></tbody></table></div>
+  </div>
+</div>
+
+<!-- CATALOGO -->
+<div id="sec-catalogo" class="sec">
+  <div class="sec-hero">
+    <div><h2>Catálogo de agentes <span class="req-tag">CAT-01..06 · CU-01</span></h2><p>Inventario completo · búsqueda, filtros, Ficha 360 y operación on/off</p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="exportCSV()">⬇ Exportar CSV</button></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;padding:16px">
+    <div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:10px">
+      <input class="inp" id="cf-q" placeholder="🔎 Nombre, ID, skill, owner, proveedor, tag…" oninput="renderCatalog()">
+      <select class="inp" id="cf-estado" onchange="renderCatalog()"><option value="">Todos los estados</option></select>
+      <select class="inp" id="cf-pais" onchange="renderCatalog()"><option value="">Todos los países</option></select>
+      <select class="inp" id="cf-dominio" onchange="renderCatalog()"><option value="">Todos los dominios</option></select>
+      <select class="inp" id="cf-origen" onchange="renderCatalog()"><option value="">Interno + Tercero</option><option>Interno</option><option>Tercero</option></select>
+      <select class="inp" id="cf-tipo" onchange="renderCatalog()"><option value="">Transv. + Espec.</option><option>Transversal</option><option>Específico</option></select>
+    </div>
+  </div>
+  <div class="bulk-bar hide" id="cat-bulk">
+    <span class="fw7 tsm"><span id="bulk-n">0</span> seleccionados</span>
+    <button class="btn btn-s btn-sm" onclick="bulkAction('Etiquetar')">🏷 Etiquetar</button>
+    <button class="btn btn-s btn-sm" onclick="bulkAction('Solicitar revisión')">📋 Solicitar revisión</button>
+    <button class="btn btn-s btn-sm" onclick="bulkAction('Programar activación')">⏱ Programar activación</button>
+    <button class="btn btn-s btn-sm" onclick="bulkAction('Exportar selección')">⬇ Exportar</button>
+    <span class="tsm tmuted" style="margin-left:auto">Acciones masivas (CAT-06)</span>
+  </div>
+  <div class="card" style="padding:0"><div class="tbl-wrap">
+    <table><thead><tr><th style="width:34px"><input type="checkbox" id="bulk-all" onchange="toggleAll(this)"></th><th>Agente</th><th>Tipo</th><th>Versión</th><th>Dominio / País</th><th>Owner</th><th>Criticidad</th><th>Estado</th><th>Revisión</th><th style="text-align:center">Operación</th></tr></thead>
+    <tbody id="cat-body"></tbody></table>
+    <div class="pager" id="cat-pager"></div>
+  </div></div>
+</div>
+
+<!-- FICHA 360 -->
+<div id="sec-ficha" class="sec">
+  <div class="sec-hero"><div><h2 id="f-title">Ficha 360</h2><p><span class="req-tag">AG360-01..06 · CU-01</span> · Vista completa del agente</p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="goSection('catalogo')">← Volver al catálogo</button><span id="f-op-btn"></span></div>
+  </div>
+  <div class="card">
+    <div class="f360-head">
+      <div style="flex:1;min-width:260px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span id="f-name" style="font-family:'Nunito Sans',sans-serif;font-size:22px;font-weight:700"></span><span id="f-estado"></span><span id="f-crit"></span></div>
+        <div class="tsm tmuted" id="f-desc" style="margin-top:6px;max-width:640px"></div>
+      </div>
+    </div>
+    <div class="f360-tabs">
+      <div class="f360-tab active" onclick="fTab(0)">Identidad</div>
+      <div class="f360-tab" onclick="fTab(1)">Capacidades</div>
+      <div class="f360-tab" onclick="fTab(2)">Estado y salud</div>
+      <div class="f360-tab" onclick="fTab(3)">Rendimiento</div>
+      <div class="f360-tab" onclick="fTab(4)">Gobierno y evidencias</div>
+      <div class="f360-tab" onclick="fTab(5)">Lifecycle</div>
+    </div>
+    <div class="f360-pane active" id="fp-0"></div>
+    <div class="f360-pane" id="fp-1"></div>
+    <div class="f360-pane" id="fp-2"></div>
+    <div class="f360-pane" id="fp-3"><div style="height:240px;position:relative"><canvas id="ch-f360"></canvas></div></div>
+    <div class="f360-pane" id="fp-4"></div>
+    <div class="f360-pane" id="fp-5"></div>
+  </div>
+</div>
+
+<!-- ONBOARDING WIZARD -->
+<div id="sec-onboarding" class="sec">
+  <div class="sec-hero"><div><h2>Incorporar nuevo agente <span class="req-tag">ONB-01..08 · CU-03</span></h2><p>Asistente guiado · mismo flujo para agentes internos y de terceros (RN-02)</p></div></div>
+  <div class="card">
+    <div class="wz-steps" id="wz-steps"></div>
+    <!-- Paso 1-2 -->
+    <div class="wz-pane active" id="wp-0">
+      <h3 style="font-family:'Nunito Sans',sans-serif;margin-bottom:14px">Paso 1 y 2 · Datos funcionales</h3>
+      <div class="grid g2">
+        <div class="fg"><label>Nombre del agente *</label><input class="inp" id="wz-nombre" placeholder="Ej. Prescripción Tarjetas"></div>
+        <div class="fg"><label>Origen *</label><select class="inp" id="wz-origen"><option>Interno</option><option>Tercero</option></select></div>
+        <div class="fg"><label>Dominio *</label><input class="inp" id="wz-dominio" placeholder="Ej. Banca Retail"></div>
+        <div class="fg"><label>País *</label><select class="inp" id="wz-pais"><option>España</option><option>México</option><option>Colombia</option><option>Argentina</option><option>Perú</option><option>Turquía</option></select></div>
+      </div>
+      <div class="fg"><label>Problema de negocio que resuelve *</label><textarea class="inp" id="wz-problema" placeholder="Beneficios esperados…"></textarea></div>
+      <div class="grid g2"><div class="fg"><label>Inputs esperados *</label><input class="inp" id="wz-inputs" placeholder="Ej. solicitud_cliente, perfil_riesgo"></div><div class="fg"><label>Outputs esperados *</label><input class="inp" id="wz-outputs" placeholder="Ej. recomendacion, score"></div></div>
+    </div>
+    <!-- Paso 3 Discovery Card -->
+    <div class="wz-pane" id="wp-1">
+      <h3 style="font-family:'Nunito Sans',sans-serif;margin-bottom:14px">Paso 3 · Discovery Card</h3>
+      <div class="grid g2"><div class="fg"><label>Skills (separadas por coma) *</label><input class="inp" id="wz-skills" placeholder="recomendar, clasificar, validar"></div><div class="fg"><label>Proveedor / endpoint A2A *</label><input class="inp" id="wz-endpoint" placeholder="https://interno.bbva/agents/..."></div></div>
+      <div class="fg"><label>Esquema de invocación REST (JSON) *</label><textarea class="inp" id="wz-schema" style="font-family:monospace;min-height:90px" placeholder='{"intent":"string","context":{...}}'></textarea></div>
+    </div>
+    <!-- Paso 4-5 Riesgos/Permisos -->
+    <div class="wz-pane" id="wp-2">
+      <h3 style="font-family:'Nunito Sans',sans-serif;margin-bottom:14px">Paso 4 y 5 · Riesgos y permisos</h3>
+      <div class="grid g2"><div class="fg"><label>Nivel de criticidad *</label><select class="inp" id="wz-crit"><option>Baja</option><option>Media</option><option>Alta</option></select></div><div class="fg"><label>¿Dispone de fallback? *</label><select class="inp" id="wz-fallback"><option>Sí</option><option>No</option></select></div></div>
+      <div class="fg"><label>Canales / roles con acceso (RBAC) *</label><input class="inp" id="wz-rbac" placeholder="Ej. App Cliente ES, Banca Online"></div>
+      <div class="alert-item ai-info"><span>🛡️</span><div><div class="ai-title">Revisión de compliance integrada</div><div class="ai-desc">Los agentes de criticidad Alta requerirán certificación de seguridad vigente antes de pasar a producción (RN-01).</div></div></div>
+    </div>
+    <!-- Paso 6 Sandbox -->
+    <div class="wz-pane" id="wp-3">
+      <h3 style="font-family:'Nunito Sans',sans-serif;margin-bottom:14px">Paso 6 · Validación en Sandbox (A2A)</h3>
+      <p class="tsm tmuted" style="margin-bottom:12px">Introduce un Structured Context Object de prueba y ejecuta una llamada A2A simulada al endpoint del agente.</p>
+      <div class="fg"><label>Structured Context Object (JSON)</label><textarea class="inp" id="wz-sctx" style="font-family:monospace;min-height:80px">{"intent":"recomendar_producto","context":{"segmento":"retail","pais":"ES"}}</textarea></div>
+      <button class="btn btn-s btn-sm" onclick="runSandbox()">▶ Ejecutar prueba A2A</button>
+      <div class="console" id="wz-console" style="margin-top:12px"><span class="muted">// Esperando ejecución…</span></div>
+    </div>
+    <!-- Paso 7-8 Publicacion -->
+    <div class="wz-pane" id="wp-4">
+      <h3 style="font-family:'Nunito Sans',sans-serif;margin-bottom:14px">Paso 7 y 8 · Publicación y seguimiento</h3>
+      <div class="alert-item ai-ok"><span>✅</span><div><div class="ai-title">Pruebas superadas</div><div class="ai-desc">El agente se creará en estado <strong>sandbox</strong> a la espera de la firma de publicación del Product Owner. Tras publicar, se abre una ventana de observación de <strong>7/15/30 días</strong> con alertas tempranas (ONB-08).</div></div></div>
+      <div class="fg"><label>Modo de publicación</label><select class="inp" id="wz-modo"><option>Piloto limitado</option><option>Productivo</option></select></div>
+      <div class="fg"><label>Ventana de observación</label><select class="inp" id="wz-vent"><option>7 días</option><option>15 días</option><option>30 días</option></select></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:22px;border-top:1px solid var(--border);padding-top:18px">
+      <button class="btn btn-s" id="wz-prev" onclick="wzNav(-1)">← Anterior</button>
+      <div class="tsm tmuted" id="wz-validate"></div>
+      <button class="btn btn-p" id="wz-next" onclick="wzNav(1)">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BANDEJA HITL -->
+<div id="sec-hitl" class="sec">
+  <div class="sec-hero"><div><h2>Bandeja de revisión humana (HITL) <span class="req-tag">CU-04 · ALT-06</span></h2><p>Flujos pausados con <code>requires_human_review</code> · fuente: BD persistente del Servicio HITL</p></div></div>
+  <div class="hitl-split">
+    <div><div class="card" style="padding:14px"><div class="card-header" style="margin-bottom:12px"><h2>Pendientes</h2><span class="badge b-amber" id="hitl-count">2 abiertas</span></div><div id="hitl-list"></div></div></div>
+    <div class="card" id="hitl-detail"><div class="no-perm">Selecciona una solicitud de la bandeja para revisarla.</div></div>
+  </div>
+</div>
+
+<!-- AUDIT TRAIL -->
+<div id="sec-audit" class="sec">
+  <div class="sec-hero"><div><h2>Audit Trail de decisiones <span class="req-tag">CU-05 · GOV-03</span></h2><p>Trazabilidad regulatoria · reconstrucción del ciclo de vida por <code>trace_id</code></p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="exportAudit()">⬇ Exportar evidencia</button></div>
+  </div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><input class="inp" id="audit-q" style="flex:1;min-width:240px" placeholder="Introduce un trace_id (prueba: TRC-7F3A21)" value="TRC-7F3A21"><button class="btn btn-p btn-sm" onclick="searchAudit()">Buscar</button></div>
+    <div class="tsm tmuted" style="margin-top:8px">trace_id disponibles: TRC-7F3A21 (Nivel 2 · LLM) · TRC-9C0B45 (Nivel 1 · regla)</div>
+  </div>
+  <div id="audit-result"></div>
+</div>
+
+<!-- ALERTAS -->
+<div id="sec-alertas" class="sec">
+  <div class="sec-hero"><div><h2>Alertas y errores <span class="req-tag">DASH-03 · ALT-01..05</span></h2><p>Caídas, degradaciones y errores de ejecución registrados</p></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="stat-card red"><div class="s-label">Alertas activas</div><div class="s-val">3</div><div class="s-sub">Sin resolver</div></div>
+    <div class="stat-card amber"><div class="s-label">Agentes caídos</div><div class="s-val">1</div><div class="s-sub">Comparador Seguros</div></div>
+    <div class="stat-card amber"><div class="s-label">Degradados</div><div class="s-val">1</div><div class="s-sub">Gestión Reclamaciones</div></div>
+    <div class="stat-card green"><div class="s-label">Resueltas hoy</div><div class="s-val">2</div><div class="s-sub">Tiempo medio: 18min</div></div>
+  </div>
+  <div class="card" style="padding:16px">
+    <div class="card-header"><h2>Alertas activas</h2><span class="badge b-red">3 sin resolver</span></div>
+    <div class="alert-item ai-danger"><span style="font-size:16px">🔴</span><div><div class="ai-title">Comparador Seguros · Caído</div><div class="ai-desc">España · Sin respuesta desde las 07:14. Última invocación hace 4h 23min.</div><div class="ai-time">Hoy 07:14 · Caída total · Crítica</div></div></div>
+    <div class="alert-item ai-warn"><span style="font-size:16px">🟠</span><div><div class="ai-title">Gestión Reclamaciones · Degradado / latencia anómala</div><div class="ai-desc">España · Latencia 312ms (umbral 300ms). 8 timeouts en las últimas 2h.</div><div class="ai-time">Hoy 05:30 · Latencia alta · Alta</div></div></div>
+    <div class="alert-item ai-warn"><span style="font-size:16px">🟠</span><div><div class="ai-title">Recomendador Fondos · Revisión de certificación vencida</div><div class="ai-desc">España · La certificación de seguridad vence en 3 días (GOV-05).</div><div class="ai-time">Ayer · Vencimiento de gobierno · Media</div></div></div>
+  </div>
+</div>
+
+<!-- METRICAS -->
+<div id="sec-metricas" class="sec">
+  <div class="sec-hero"><div><h2>Métricas y rendimiento <span class="req-tag">MET-01..07 · DASH-04</span></h2><p>Latencia, tasa de éxito, HITL/override y errores por tipología</p></div>
+    <div class="sec-actions"><select class="inp" style="width:auto"><option>Últimas 24h</option><option>Últimos 7 días</option><option>Últimos 30 días</option></select></div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px">
+    <div class="stat-card green"><div class="s-label">Latencia media</div><div class="s-val">187ms</div><div class="s-sub">↓ 8ms vs ayer</div></div>
+    <div class="stat-card"><div class="s-label">Percentil p95</div><div class="s-val">298ms</div><div class="s-sub">Latencia (MET-03)</div></div>
+    <div class="stat-card green"><div class="s-label">Tasa de éxito</div><div class="s-val">97.3%</div><div class="s-sub">Global ecosistema</div></div>
+    <div class="stat-card aqua"><div class="s-label">Uptime</div><div class="s-val">99.6%</div><div class="s-sub">Disponibilidad (MET-01)</div></div>
+    <div class="stat-card"><div class="s-label">SLA cumplido</div><div class="s-val">98.1%</div><div class="s-sub">Sobre objetivo</div></div>
+    <div class="stat-card aqua"><div class="s-label">Ratio HITL</div><div class="s-val">3.1%</div><div class="s-sub">Intervención humana</div></div>
+    <div class="stat-card purp"><div class="s-label">Override / Fallback</div><div class="s-val">1.2% / 0.9%</div><div class="s-sub">Manual / ratio fallback</div></div>
+    <div class="stat-card red"><div class="s-label">Sobre umbral</div><div class="s-val">2</div><div class="s-sub">Latencia >300ms</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-header"><h2>Errores por tipología</h2></div><div style="height:240px;position:relative"><canvas id="ch-err"></canvas></div></div>
+    <div class="card"><div class="card-header"><h2>Evolución de latencia (7 días)</h2></div><div style="height:240px;position:relative"><canvas id="ch-lat-multi"></canvas></div></div>
+  </div>
+  <div class="card"><div class="card-header"><h2>Métricas de gobierno <span class="req-tag">MET-07</span></h2><span class="tsm tmuted">Cuadro de riesgo</span></div>
+    <div class="grid g3">
+      <div class="stat-card amber"><div class="s-label">Revisiones vencidas</div><div class="s-val">1</div><div class="s-sub">Recomendador Fondos</div></div>
+      <div class="stat-card red"><div class="s-label">Inconsistencias de permisos</div><div class="s-val">0</div><div class="s-sub">RBAC coherente</div></div>
+      <div class="stat-card"><div class="s-label">Gaps de observabilidad</div><div class="s-val">2</div><div class="s-sub">Agentes sin métricas completas</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:0"><div class="card-header"><h2>Latencia y éxito por agente</h2><span class="tsm tmuted">Umbral aceptable: 300ms</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Agente</th><th>País</th><th>Latencia</th><th>p95</th><th>Visualización</th><th>Éxito</th><th>HITL</th><th>Fallback</th><th>Estado</th></tr></thead><tbody id="lat-table-detail"></tbody></table></div>
+  </div>
+</div>
+
+<!-- PROSPECTOS / REGISTRY -->
+<div id="sec-prospectos" class="sec">
+  <div class="sec-hero"><div><h2>Prospectos · Agent Registry <span class="req-tag">REG-01..06</span></h2><p>Candidatos detectados por el Registry/ojeador · pipeline de incorporación</p></div></div>
+  <div class="grid g4" style="margin-bottom:16px" id="reg-stats"></div>
+  <div class="card" style="padding:0"><div class="tbl-wrap">
+    <table><thead><tr><th>Candidato</th><th>Fuente</th><th>Dominio sugerido</th><th>Proveedor</th><th>Madurez</th><th>Esfuerzo integ.</th><th>Estado</th><th style="text-align:center">Acciones</th></tr></thead>
+    <tbody id="reg-body"></tbody></table>
+  </div></div>
+</div>
+
+<!-- CENTRO DE APROBACIONES -->
+<div id="sec-aprobaciones" class="sec">
+  <div class="sec-hero"><div><h2>Centro de aprobaciones <span class="req-tag">Maker-Checker · RN-03 · ALT-06</span></h2><p>Solicitudes de operación sobre agentes críticos pendientes de doble validación</p></div></div>
+  <div class="card" id="appr-card"></div>
+</div>
+
+<!-- LOG -->
+<div id="sec-log" class="sec">
+  <div class="sec-hero"><div><h2>Log de operaciones <span class="req-tag">OPS-04 · RN-04</span></h2><p>Registro inmutable de encendidos y apagados</p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="exportLog()">⬇ Exportar CSV</button></div>
+  </div>
+  <div class="card" style="padding:0"><div class="tbl-wrap">
+    <table><thead><tr><th>Fecha y hora</th><th>Agente</th><th>Acción</th><th>País</th><th>Usuario</th><th>Motivo</th><th>trace_id</th><th>Resultado</th></tr></thead><tbody id="log-body"></tbody></table>
+  </div></div>
+</div>
+
+<!-- ════════ AGENT REGISTRY CENTER (Mejora #1) ════════ -->
+<div id="sec-registry" class="sec">
+  <div class="sec-hero">
+    <div><h2>Agent Registry <span class="req-tag">REG-CORE · A2A</span></h2><p>Componente de descubrimiento del Orquestador · Agent Cards, skills, salud y relaciones</p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="exportRegistry()">⬇ Exportar registry</button></div>
+  </div>
+  <div class="grid g5" style="margin-bottom:16px" id="reg-kpis"></div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input class="inp" id="rg-q" style="flex:1;min-width:220px" placeholder="🔎 Agent ID, nombre, skill, owner, endpoint A2A…" oninput="renderRegistry()">
+      <select class="inp" id="rg-health" style="width:auto" onchange="renderRegistry()"><option value="">Toda la salud</option><option value="Active">Active</option><option value="Degraded">Degraded</option><option value="Down">Down</option><option value="Sandbox">Sandbox</option></select>
+    </div>
+  </div>
+  <div class="card" style="padding:0;margin-bottom:16px"><div class="tbl-wrap">
+    <table><thead><tr><th>Agent ID</th><th>Agent Name</th><th>Ver.</th><th>Status</th><th>Skills</th><th>Owner</th><th>Domain</th><th>A2A Endpoint</th><th>Success</th><th>Avg Latency</th><th>Last Health Check</th></tr></thead>
+    <tbody id="reg-table-body"></tbody></table>
+  </div></div>
+  <div class="card">
+    <div class="card-header"><h2>Registry Relationships <span class="req-tag">A2A graph</span></h2><span class="tsm tmuted">Dependencias y orden de coordinación entre agentes · click en un nodo abre su Agent Card</span></div>
+    <div class="rel-graph" id="reg-rel"></div>
+  </div>
+</div>
+
+<!-- ════════ ROUTING DECISION CENTER (Mejora #2) ════════ -->
+<div id="sec-routing" class="sec">
+  <div class="sec-hero">
+    <div><h2>Routing Center <span class="req-tag">ROUTE-01 · Nivel 1/2</span></h2><p>Cómo el Orquestador decide: enrutamiento determinista (reglas) y clasificación LLM</p></div>
+  </div>
+  <div class="grid g5" style="margin-bottom:16px" id="route-kpis"></div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-header"><h2>Decision Engine Simulator <span class="req-tag">ROUTE-02</span></h2></div>
+      <div class="grid g2">
+        <div class="fg"><label>operation_type</label><select class="inp" id="sim-op"><option value="automarket_lead">automarket_lead</option><option value="evaluar_credito">evaluar_credito</option><option value="kyc_onboarding">kyc_onboarding</option><option value="revisar_fraude">revisar_fraude</option><option value="analizar_contrato">analizar_contrato</option><option value="consulta_generica">consulta_generica</option></select></div>
+        <div class="fg"><label>domain</label><select class="inp" id="sim-dom"><option>Marketing</option><option>Riesgo</option><option>Compliance</option><option>Legal</option><option>Banca Retail</option><option>Wealth</option></select></div>
+        <div class="fg"><label>channel</label><select class="inp" id="sim-chan"><option>App Cliente ES</option><option>Banca Online ES</option><option>Gestor</option><option>API Partner</option></select></div>
+        <div class="fg"><label>free text</label><input class="inp" id="sim-text" placeholder="Ej. cliente interesado en hipoteca…"></div>
+      </div>
+      <button class="btn btn-p" onclick="simulateRouting()" style="margin-top:6px">⚡ Simular Routing</button>
+      <div id="sim-out" style="margin-top:16px"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Routing Analytics <span class="req-tag">ROUTE-05</span></h2></div>
+      <div style="height:180px;position:relative;margin-bottom:14px"><canvas id="ch-route-mix"></canvas></div>
+      <div style="height:160px;position:relative"><canvas id="ch-route-trend"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Routing Rules Repository <span class="req-tag">ROUTE-03</span></h2><span class="tsm tmuted">Reglas deterministas (Nivel 1)</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Rule ID</th><th>Rule Name</th><th>Condition</th><th>Agent</th><th>Priority</th><th>Status</th></tr></thead><tbody id="route-rules-body"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>LLM Decisions <span class="req-tag">ROUTE-04 · Nivel 2</span></h2><span class="tsm tmuted">Clasificaciones recientes del clasificador LLM</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Prompt Summary</th><th>Selected Agent</th><th>Confidence</th><th>Timestamp</th></tr></thead><tbody id="route-llm-body"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ════════ A2A FLOW & TRACEABILITY CENTER (Mejora #3) ════════ -->
+<div id="sec-traceability" class="sec">
+  <div class="sec-hero">
+    <div><h2>Traceability Center <span class="req-tag">TRACE-01 · A2A</span></h2><p>Coordinación autónoma entre agentes · reconstrucción end-to-end por <code>trace_id</code></p></div>
+    <div class="sec-actions"><button class="btn btn-s btn-sm" onclick="goSection('audit')">→ Abrir Audit Trail</button></div>
+  </div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><input class="inp" id="tr-q" style="flex:1;min-width:240px" placeholder="Introduce un trace_id (prueba: TRC-7F3A21)" value="TRC-7F3A21"><button class="btn btn-p btn-sm" onclick="searchTrace()">Buscar</button></div>
+    <div class="tsm tmuted" style="margin-top:8px">trace_id con flujo A2A completo: TRC-7F3A21 (KYC→Fraud→Document→HITL) · TRC-LEAD88 (Lead→CRM→KYC) · TRC-9C0B45 (Nivel 1)</div>
+  </div>
+  <div id="tr-result"></div>
+</div>
+
+</div><!-- /section-wrap -->
+</div><!-- /scroll -->
+
+<!-- MODAL AGENT CARD (Registry) -->
+<div class="modal-overlay" id="modal-card">
+  <div class="modal wide">
+    <div class="mh"><h2 id="card-title">Agent Card</h2><button class="mclose" onclick="closeModal('modal-card')">✕</button></div>
+    <div class="mb-p" id="card-body"></div>
+    <div class="mf"><button class="btn btn-s" onclick="closeModal('modal-card')">Cerrar</button><button class="btn btn-p" id="card-ficha" onclick="">Abrir Ficha 360</button></div>
+  </div>
+</div>
+
+<!-- MODAL ON/OFF + MAKER-CHECKER -->
+<div class="modal-overlay" id="modal-op">
+  <div class="modal">
+    <div class="mh"><h2 id="op-title">Confirmar operación</h2><button class="mclose" onclick="closeModal('modal-op')">✕</button></div>
+    <div class="mb-p">
+      <div class="alert-item" id="op-alert-box" style="margin-bottom:16px"><span style="font-size:16px">⚠️</span><div><div class="ai-title" id="op-alert-title">Confirmar acción</div><div class="ai-desc" id="op-alert-desc"></div></div></div>
+      <div id="op-impact" style="margin-bottom:14px"></div>
+      <div class="fg"><label>Agente</label><input class="inp" id="op-agente" readonly style="background:var(--sand)"></div>
+      <div class="grid g2" id="op-modal-row">
+        <div class="fg"><label>Modalidad (OPS-01)</label><select class="inp" id="op-modalidad" onchange="opModalidadChange()"><option>Inmediata</option><option>Programada</option></select></div>
+        <div class="fg hide" id="op-fecha-fg"><label>Fecha y hora</label><input class="inp" id="op-fecha" type="datetime-local"></div>
+      </div>
+      <div class="fg hide" id="op-rollback-fg"><label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12px"><input type="checkbox" id="op-rollback"> Habilitar rollback automático si hay degradación en la ventana de observación (OPS-05)</label></div>
+      <div class="fg"><label>Motivo (obligatorio · RN-04)</label><textarea class="inp" id="op-motivo" placeholder="Describe el motivo…"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeModal('modal-op')">Cancelar</button><button class="btn btn-p" id="op-btn" onclick="confirmOp()">Confirmar</button></div>
+  </div>
+</div>
+
+<!-- MODAL COMPARACIÓN PROSPECTO -->
+<div class="modal-overlay" id="modal-cmp">
+  <div class="modal wide">
+    <div class="mh"><h2 id="cmp-title">Comparación de candidato</h2><button class="mclose" onclick="closeModal('modal-cmp')">✕</button></div>
+    <div class="mb-p" id="cmp-body"></div>
+    <div class="mf"><button class="btn btn-s" onclick="closeModal('modal-cmp')">Cerrar</button><button class="btn btn-p" id="cmp-eval" onclick="">Lanzar evaluación / shadowing</button></div>
+  </div>
+</div>
+
+<script>
+// ── RBAC: permisos por rol ───────────────────────────────────────────────────
+const ROLES={
+ 'ROL-01':{n:'Product Owner del Hub',u:'Carlos Méndez',ini:'CM',perms:{onboarding:1,hitl:1,operar:1,operarCritico:1,aprobar:1,audit:1}},
+ 'ROL-02':{n:'Product Owner de Dominio',u:'Marta Ortega',ini:'MO',perms:{onboarding:1,hitl:1,operar:1,operarCritico:0,aprobar:0,audit:1}},
+ 'ROL-03':{n:'Gestor de Operaciones',u:'Luis Prieto',ini:'LP',perms:{onboarding:0,hitl:1,operar:1,operarCritico:0,aprobar:0,audit:0}},
+ 'ROL-04':{n:'Analista de Negocio',u:'Ana Ruiz',ini:'AR',perms:{onboarding:0,hitl:0,operar:0,operarCritico:0,aprobar:0,audit:0}},
+ 'ROL-05':{n:'Riesgo / Compliance',u:'Sofía Lima',ini:'SL',perms:{onboarding:0,hitl:1,operar:0,operarCritico:0,aprobar:1,audit:1}},
+};
+let ROLE='ROL-01';
+function can(p){return !!ROLES[ROLE].perms[p];}
+
+function changeRole(){
+  ROLE=document.getElementById('role-select').value;
+  const r=ROLES[ROLE];
+  document.getElementById('tb-avatar').textContent=r.ini;
+  document.getElementById('tb-avatar').title=r.u;
+  document.getElementById('hub-user').textContent=r.u.split(' ')[0];
+  document.getElementById('hub-role-tag').textContent='Rol: '+r.n;
+  applyPerms();
+  // si estás en una sección sin permiso, vuelve al hub
+  const act=document.querySelector('.sec.active');
+  if(act){const sid=act.id.replace('sec-','');if(SEC_PERM[sid]&&!can(SEC_PERM[sid]))goHub();}
+  refreshAll();
+}
+function applyPerms(){
+  document.querySelectorAll('[data-perm]').forEach(el=>{
+    el.classList.toggle('hide',!can(el.getAttribute('data-perm')));
+  });
+}
+
+// ── DATOS ────────────────────────────────────────────────────────────────────
+const ESTADOS=['Activo','Inactivo','Degradado','Caído','Sandbox','Certificado','Shadowing','Deprecado'];
+const AGENTS=[
+ {id:'AGT-001',nombre:'Prescripción Hipotecaria',pais:'España',dominio:'Banca Retail',origen:'Interno',owner:'M. Ortega',version:'v2.3',crit:'Alta',estado:'Activo',lat:178,invoc_hoy:14200,exito:98.4,hitl:2.1,ultima:'Hace 2 min',rev:'2026-04-12',prov:'In-house',fallback:true,skills:['prescribir','clasificar_perfil','simular_cuota'],inputs:'solicitud, perfil_riesgo',outputs:'recomendacion, score',desc:'Recomienda productos hipotecarios según el perfil de riesgo y la capacidad de pago del cliente.'},
+ {id:'AGT-002',nombre:'Comparador Seguros',pais:'España',dominio:'Seguros',origen:'Tercero',owner:'M. Ortega',version:'v1.1',crit:'Media',estado:'Caído',lat:null,invoc_hoy:0,exito:0,hitl:0,ultima:'Hace 4h 23min',rev:'2026-03-01',prov:'InsureTech S.L.',fallback:false,skills:['comparar_polizas'],inputs:'parametros_poliza',outputs:'ranking',desc:'Compara pólizas de seguros de terceros y genera un ranking por cobertura y precio.'},
+ {id:'AGT-004',nombre:'Detección Fraude',pais:'Colombia',dominio:'Riesgo',origen:'Interno',owner:'C. Méndez',version:'v3.0',crit:'Alta',estado:'Activo',lat:203,invoc_hoy:38400,exito:99.1,hitl:5.4,ultima:'Hace 30 seg',rev:'2026-05-02',prov:'In-house',fallback:true,skills:['detectar_anomalia','scoring_fraude'],inputs:'transaccion',outputs:'alerta, score',desc:'Detecta patrones de fraude en transacciones en tiempo real.'},
+ {id:'AGT-005',nombre:'Gestión Reclamaciones',pais:'España',dominio:'Banca Retail',origen:'Interno',owner:'L. Prieto',version:'v1.7',crit:'Media',estado:'Degradado',lat:312,invoc_hoy:4100,exito:91.2,hitl:8.9,ultima:'Hace 1 min',rev:'2026-02-18',prov:'In-house',fallback:true,skills:['clasificar_reclamacion','enrutar'],inputs:'reclamacion',outputs:'categoria, prioridad',desc:'Clasifica y enruta reclamaciones de clientes. Actualmente degradado por latencia alta.'},
+ {id:'AGT-007',nombre:'Recomendador Fondos',pais:'España',dominio:'Wealth',origen:'Tercero',owner:'A. Ruiz',version:'v2.0',crit:'Alta',estado:'Inactivo',lat:null,invoc_hoy:0,exito:0,hitl:0,ultima:'12/05/2026',rev:'2026-01-09',prov:'WealthAI Ltd.',fallback:true,skills:['recomendar_fondo','perfilar'],inputs:'perfil_inversor',outputs:'cartera_sugerida',desc:'Recomienda fondos de inversión. Inactivo por degradación de calidad y certificación próxima a vencer.'},
+ {id:'AGT-008',nombre:'KYC Documental',pais:'Argentina',dominio:'Compliance',origen:'Interno',owner:'S. Lima',version:'v1.4',crit:'Alta',estado:'Activo',lat:112,invoc_hoy:5800,exito:96.7,hitl:4.0,ultima:'Hace 5 min',rev:'2026-04-30',prov:'In-house',fallback:true,skills:['extraer_documento','validar_identidad'],inputs:'documento',outputs:'datos, validacion',desc:'Extrae y valida datos de documentos de identidad para procesos KYC.'},
+ {id:'AGT-011',nombre:'Reconciliación Contable',pais:'México',dominio:'Tesorería',origen:'Interno',owner:'C. Méndez',version:'v2.1',crit:'Media',estado:'Activo',lat:64,invoc_hoy:2500,exito:99.5,hitl:0.8,ultima:'Hace 3 min',rev:'2026-05-01',prov:'In-house',fallback:true,skills:['conciliar','detectar_descuadre'],inputs:'movimientos',outputs:'conciliacion',desc:'Concilia movimientos contables y detecta descuadres.'},
+ {id:'AGT-013',nombre:'Liquidez Intradía',pais:'España',dominio:'Tesorería',origen:'Interno',owner:'C. Méndez',version:'v1.9',crit:'Alta',estado:'Activo',lat:64,invoc_hoy:2500,exito:99.7,hitl:0.5,ultima:'Hace 1 min',rev:'2026-04-22',prov:'In-house',fallback:true,skills:['proyectar_liquidez'],inputs:'posiciones',outputs:'proyeccion',desc:'Proyecta la liquidez intradía de la entidad.'},
+ {id:'AGT-014',nombre:'Onboarding Pymes',pais:'España',dominio:'Banca Empresa',origen:'Tercero',owner:'M. Ortega',version:'v1.0',crit:'Media',estado:'Sandbox',lat:108,invoc_hoy:0,exito:0,hitl:0,ultima:'En pruebas',rev:'2026-05-15',prov:'FinOnboard Inc.',fallback:false,skills:['onboarding_empresa','verificar_datos'],inputs:'datos_pyme',outputs:'expediente',desc:'Automatiza el alta de pymes. En sandbox a la espera de certificación.'},
+ {id:'AGT-015',nombre:'Alertas Regulatorias',pais:'Colombia',dominio:'Compliance',origen:'Interno',owner:'S. Lima',version:'v2.2',crit:'Alta',estado:'Activo',lat:142,invoc_hoy:14200,exito:98.9,hitl:1.6,ultima:'Hace 2 min',rev:'2026-04-18',prov:'In-house',fallback:true,skills:['monitorizar_norma','alertar'],inputs:'evento',outputs:'alerta_regulatoria',desc:'Monitoriza cambios normativos y genera alertas regulatorias.'},
+ {id:'AGT-017',nombre:'Análisis Contratos',pais:'España',dominio:'Legal',origen:'Tercero',owner:'A. Ruiz',version:'v0.9',crit:'Media',estado:'Certificado',lat:null,invoc_hoy:0,exito:0,hitl:0,ultima:'Pend. publicación',rev:'2026-05-10',prov:'LegalMind GmbH',fallback:true,skills:['extraer_clausula','clasificar_riesgo'],inputs:'contrato',outputs:'resumen, riesgos',desc:'Analiza contratos legales. Certificado y a la espera de firma de publicación.'},
+ {id:'AGT-018',nombre:'Churn Predictor',pais:'Perú',dominio:'Marketing',origen:'Interno',owner:'A. Ruiz',version:'v1.2',crit:'Baja',estado:'Deprecado',lat:null,invoc_hoy:0,exito:0,hitl:0,ultima:'15/03/2026',rev:'2025-12-01',prov:'In-house',fallback:false,skills:['predecir_churn'],inputs:'comportamiento',outputs:'probabilidad',desc:'Predice abandono de clientes. Deprecado y sustituido por una versión más reciente.'},
+ {id:'AGT-019',nombre:'Scoring Crediticio',pais:'Turquía',dominio:'Riesgo',origen:'Interno',owner:'C. Méndez',version:'v2.5',crit:'Alta',estado:'Activo',lat:189,invoc_hoy:9300,exito:98.0,hitl:3.3,ultima:'Hace 4 min',rev:'2026-04-25',prov:'In-house',fallback:true,skills:['scoring_credito','evaluar_riesgo'],inputs:'solicitud_credito',outputs:'score, decision',desc:'Calcula el scoring crediticio de solicitudes de préstamo.'},
+ {id:'AGT-020',nombre:'CRM Agent',pais:'España',dominio:'Marketing',origen:'Interno',owner:'A. Ruiz',version:'v1.6',crit:'Media',estado:'Activo',lat:96,invoc_hoy:11200,exito:97.8,hitl:1.1,ultima:'Hace 1 min',rev:'2026-05-09',prov:'In-house',fallback:true,skills:['actualizar_cliente','registrar_interaccion','crear_oportunidad'],inputs:'lead_cualificado, perfil',outputs:'oportunidad_crm, ticket',desc:'Sincroniza leads y oportunidades con el CRM corporativo y registra interacciones comerciales.'},
+ {id:'AGT-021',nombre:'Lead Qualification Agent',pais:'España',dominio:'Marketing',origen:'Interno',owner:'A. Ruiz',version:'v1.3',crit:'Media',estado:'Degradado',lat:271,invoc_hoy:7600,exito:94.6,hitl:2.4,ultima:'Hace 2 min',rev:'2026-05-04',prov:'In-house',fallback:true,skills:['cualificar_lead','enriquecer_lead','scoring_intencion'],inputs:'lead_bruto, fuente',outputs:'lead_cualificado, score',desc:'Cualifica y puntúa leads entrantes (automarket) antes del handoff a KYC y CRM. Degradado por latencia.'},
+];
+
+const TRANSVERSAL=['Compliance','Riesgo','Tesorería'];
+AGENTS.forEach(a=>{a.tipo=TRANSVERSAL.includes(a.dominio)?'Transversal':'Específico';});
+
+// ── Campos derivados para el Agent Registry / A2A ────────────────────────────
+const HEALTH_MAP={Activo:'Active',Degradado:'Degraded','Caído':'Down',Inactivo:'Down',Sandbox:'Sandbox',Certificado:'Sandbox',Shadowing:'Sandbox',Deprecado:'Down'};
+AGENTS.forEach(a=>{
+  a.health=HEALTH_MAP[a.estado]||'Down';
+  a.a2a='https://a2a.bbva/agents/'+a.id.toLowerCase().replace('agt-','ag');
+  a.lastHealth=a.estado==='Activo'?'Hace 12 s':a.estado==='Degradado'?'Hace 18 s':a.estado==='Sandbox'?'En pruebas':'Hace 4 min';
+});
+const HEALTH_CLASS={Active:'hd-active',Degraded:'hd-degraded',Down:'hd-down',Sandbox:'hd-sandbox'};
+const HEALTH_BADGE={Active:'b-green',Degraded:'b-amber',Down:'b-red',Sandbox:'b-aqua'};
+
+// ── Relaciones A2A entre agentes (cadenas de coordinación) ───────────────────
+const RELATIONSHIPS=[
+  {nombre:'Onboarding / Automarket',chain:['AGT-021','AGT-020','AGT-008']},
+  {nombre:'Evaluación de riesgo de crédito',chain:['AGT-008','AGT-004','AGT-017']},
+  {nombre:'Alta de empresa',chain:['AGT-014','AGT-008','AGT-015']},
+];
+
+// ── Routing: reglas deterministas (Nivel 1) ──────────────────────────────────
+const ROUTING_RULES=[
+  {id:'R-MKT-01',name:'automarket_lead → Lead Qualification',cond:'operation_type = automarket_lead',agent:'AGT-021',prio:1,status:'Activa'},
+  {id:'R-KYC-01',name:'kyc_onboarding → KYC Documental',cond:'operation_type = kyc_onboarding',agent:'AGT-008',prio:1,status:'Activa'},
+  {id:'R-FRAUD-01',name:'revisar_fraude → Detección Fraude',cond:'operation_type = revisar_fraude OR domain = Riesgo',agent:'AGT-004',prio:1,status:'Activa'},
+  {id:'R-LEGAL-01',name:'analizar_contrato → Análisis Contratos',cond:'operation_type = analizar_contrato AND domain = Legal',agent:'AGT-017',prio:2,status:'Activa'},
+  {id:'R-WEALTH-02',name:'recomendar_fondo → Recomendador Fondos',cond:'domain = Wealth AND intent = recomendar_fondo',agent:'AGT-007',prio:2,status:'Inactiva'},
+  {id:'R-RETAIL-01',name:'evaluar_credito → Scoring Crediticio',cond:'operation_type = evaluar_credito',agent:'AGT-019',prio:1,status:'Activa'},
+];
+
+// ── Routing: decisiones LLM (Nivel 2) ────────────────────────────────────────
+const LLM_DECISIONS=[
+  {prompt:'"Necesito revisar una operación sospechosa de un cliente VIP"',agent:'AGT-004',conf:0.94,ts:'Hoy 09:02:11'},
+  {prompt:'"Quiero contratar una hipoteca, ¿qué me recomendáis?"',agent:'AGT-001',conf:0.88,ts:'Hoy 08:55:47'},
+  {prompt:'"Analiza las cláusulas de este contrato de arrendamiento"',agent:'AGT-017',conf:0.91,ts:'Hoy 08:41:02'},
+  {prompt:'"Cliente potencial interesado en producto de inversión"',agent:'AGT-021',conf:0.73,ts:'Hoy 08:30:55'},
+  {prompt:'"Verifica la identidad con el documento adjunto"',agent:'AGT-008',conf:0.96,ts:'Hoy 08:12:19'},
+];
+
+// ── Routing: KPIs y series ───────────────────────────────────────────────────
+const ROUTING_KPI={requests:18420,n1:14110,n2:4310,accuracy:96.4,avgTime:42};
+
+// ── Traceability: flujos A2A end-to-end por trace_id ─────────────────────────
+const TRACES={
+ 'TRC-7F3A21':{intent:'evaluar_credito',domain:'Riesgo',channel:'App Cliente ES',nivel:2,
+   ctx:{trace_id:'TRC-7F3A21',intent:'evaluar_credito',domain:'Riesgo',source_channel:'App Cliente ES',segmento:'retail',pais:'ES'},
+   nodes:[
+     {ag:'Orchestrator',id:'—',ts:'09:01:22',dur:'8 ms',status:'ok',d:'Recepción + clasificación de intención (0.91)'},
+     {ag:'KYC Documental',id:'AGT-008',ts:'09:01:23',dur:'112 ms',status:'ok',d:'Validación de identidad OK'},
+     {ag:'Detección Fraude',id:'AGT-004',ts:'09:01:24',dur:'203 ms',status:'ok',d:'Scoring de fraude: bajo riesgo'},
+     {ag:'Análisis Contratos',id:'AGT-017',ts:'09:01:25',dur:'180 ms',status:'ok',d:'Extracción de cláusulas del expediente'},
+     {ag:'HITL',id:'—',ts:'09:02:00',dur:'12 min',status:'hitl',d:'requires_human_review · score 0.48 zona gris'},
+     {ag:'Final Result',id:'—',ts:'09:14:10',dur:'—',status:'ok',d:'Crédito aprobado con revisión humana'},
+   ],
+   handoffs:[
+     {src:'Orchestrator',tgt:'KYC Documental',task:'validar_identidad',status:'ok',dur:'112 ms'},
+     {src:'KYC Documental',tgt:'Detección Fraude',task:'scoring_fraude',status:'ok',dur:'203 ms'},
+     {src:'Detección Fraude',tgt:'Análisis Contratos',task:'extraer_clausula',status:'ok',dur:'180 ms'},
+     {src:'Análisis Contratos',tgt:'HITL',task:'requires_human_review',status:'pausa',dur:'12 min'},
+     {src:'HITL',tgt:'Orchestrator',task:'resume',status:'ok',dur:'—'},
+   ]},
+ 'TRC-LEAD88':{intent:'automarket_lead',domain:'Marketing',channel:'API Partner',nivel:1,
+   ctx:{trace_id:'TRC-LEAD88',intent:'automarket_lead',domain:'Marketing',source_channel:'API Partner'},
+   nodes:[
+     {ag:'Orchestrator',id:'—',ts:'10:15:01',dur:'6 ms',status:'ok',d:'Regla R-MKT-01 (Nivel 1) aplicada'},
+     {ag:'Lead Qualification Agent',id:'AGT-021',ts:'10:15:01',dur:'271 ms',status:'ok',d:'Lead cualificado · score 0.81'},
+     {ag:'CRM Agent',id:'AGT-020',ts:'10:15:02',dur:'96 ms',status:'ok',d:'Oportunidad creada en CRM'},
+     {ag:'KYC Documental',id:'AGT-008',ts:'10:15:02',dur:'112 ms',status:'ok',d:'Pre-validación KYC del prospecto'},
+     {ag:'Final Result',id:'—',ts:'10:15:03',dur:'—',status:'ok',d:'Lead enrutado a campaña · sin intervención humana'},
+   ],
+   handoffs:[
+     {src:'Orchestrator',tgt:'Lead Qualification Agent',task:'cualificar_lead',status:'ok',dur:'271 ms'},
+     {src:'Lead Qualification Agent',tgt:'CRM Agent',task:'crear_oportunidad',status:'ok',dur:'96 ms'},
+     {src:'CRM Agent',tgt:'KYC Documental',task:'pre_kyc',status:'ok',dur:'112 ms'},
+   ]},
+ 'TRC-9C0B45':{intent:'recomendar_fondo',domain:'Wealth',channel:'Banca Online ES',nivel:1,
+   ctx:{trace_id:'TRC-9C0B45',intent:'recomendar_fondo',domain:'Wealth',source_channel:'Banca Online ES'},
+   nodes:[
+     {ag:'Orchestrator',id:'—',ts:'11:28:04',dur:'5 ms',status:'ok',d:'Regla R-WEALTH-02 (Nivel 1)'},
+     {ag:'Recomendador Fondos',id:'AGT-007',ts:'11:28:04',dur:'—',status:'down',d:'Agente degradado → fallback'},
+     {ag:'Final Result',id:'—',ts:'11:28:05',dur:'—',status:'ok',d:'Resuelto vía fallback · sin HITL'},
+   ],
+   handoffs:[
+     {src:'Orchestrator',tgt:'Recomendador Fondos',task:'recomendar_fondo',status:'fallback',dur:'1 reintento'},
+   ]},
+};
+
+const PROSPECTS=[
+ {id:'PRG-101',nombre:'Recomendador Fondos v3 (LLM)',fuente:'Registry · auto',dominio:'Wealth',prov:'WealthAI Ltd.',madurez:'Alta',esfuerzo:'Medio',estado:'Detectado',sustituye:'AGT-007',mejoras:{Precisión:'+6%',Latencia:'-40ms',Coste:'-12%',Cobertura:'=' },desc:'Candidato a sustituir al Recomendador Fondos actual con mejor precisión y menor latencia.'},
+ {id:'PRG-102',nombre:'Fraude RealTime (3rd party)',fuente:'Scouting funcional',dominio:'Riesgo',prov:'FraudGuard Inc.',madurez:'Media',esfuerzo:'Alto',estado:'En análisis',sustituye:'AGT-004',mejoras:{Precisión:'+2%',Latencia:'-15ms',Coste:'+8%',Cobertura:'+canales'},desc:'Mejora cobertura de canales pero con mayor coste. En análisis funcional.'},
+ {id:'PRG-103',nombre:'KYC Vision OCR',fuente:'Registry · auto',dominio:'Compliance',prov:'DocSense',madurez:'Alta',esfuerzo:'Bajo',estado:'En shadowing',sustituye:'AGT-008',mejoras:{Precisión:'+9%',Latencia:'-20ms',Coste:'-5%',Cobertura:'='},desc:'En shadowing contra KYC Documental actual; resultados preliminares favorables.'},
+ {id:'PRG-104',nombre:'Churn Predictor v2',fuente:'Scouting funcional',dominio:'Marketing',prov:'In-house',madurez:'Media',esfuerzo:'Bajo',estado:'Rechazado',sustituye:null,mejoras:{Precisión:'+1%',Latencia:'=',Coste:'=',Cobertura:'='},desc:'Mejora marginal; rechazado por bajo retorno.'},
+];
+
+let APPROVALS=[];
+
+const LOG=[
+ {ts:'18/05 09:12',agente:'Prescripción Hipotecaria',accion:'Activado',pais:'ES',user:'C. Méndez',motivo:'Expansión cobertura Q2',trace:'TRC-7F3A21',ok:true},
+ {ts:'12/05 17:45',agente:'Gestión Reclamaciones',accion:'Activado',pais:'ES',user:'M. Ortega',motivo:'Reinicio tras degradación',trace:'TRC-3B1180',ok:true},
+ {ts:'10/05 11:30',agente:'Recomendador Fondos',accion:'Desactivado',pais:'ES',user:'C. Méndez',motivo:'Calidad de respuestas degradada',trace:'TRC-9C0B45',ok:true},
+ {ts:'08/05 08:00',agente:'KYC Documental',accion:'Desactivado',pais:'AR',user:'M. Ortega',motivo:'Mantenimiento modelo',trace:'TRC-55AA01',ok:true},
+ {ts:'05/05 14:22',agente:'Comparador Seguros',accion:'Desactivado',pais:'ES',user:'M. Ortega',motivo:'Calidad < umbral',trace:'TRC-12FF90',ok:false},
+];
+
+let HITL=[
+ {id:1,trace:'TRC-7F3A21',agente:'Scoring Crediticio',motivo:'Score en zona gris (0.48) — requiere validación humana antes de denegar el crédito.',ts:'Hoy 09:02',estado:'Pendiente',ctx:'{\n  "trace_id": "TRC-7F3A21",\n  "intent": "evaluar_credito",\n  "context": {\n    "score": 0.48,\n    "importe": 45000,\n    "segmento": "retail",\n    "pais": "ES"\n  }\n}'},
+ {id:2,trace:'TRC-A4D7E2',agente:'Detección Fraude',motivo:'Transacción marcada de alto riesgo sobre cliente VIP — confirmar bloqueo.',ts:'Hoy 08:41',estado:'Pendiente',ctx:'{\n  "trace_id": "TRC-A4D7E2",\n  "intent": "revisar_fraude",\n  "context": {\n    "riesgo": "alto",\n    "cliente": "VIP",\n    "importe": 12500\n  }\n}'},
+];
+
+const AUDIT_DATA={
+ 'TRC-7F3A21':{canal:'App Cliente ES',ts:'18/05 09:01:22',intent:'evaluar_credito',nivel:2,steps:[
+   {ic:'📥',t:'Recepción de petición',d:'Canal: App Cliente ES · 09:01:22 · idioma ES',lvl:null},
+   {ic:'🧠',t:'Clasificación de intención',d:'Intención extraída: "evaluar_credito" (confianza 0.91)',lvl:null},
+   {ic:'🔀',t:'Enrutamiento Nivel 2 (clasificador LLM)',d:'Regla determinista no concluyente → escalado a LLM. Candidatos evaluados del Registry: Scoring Crediticio (0.94), Recomendador Fondos (0.31). Seleccionado: Scoring Crediticio.',lvl:2},
+   {ic:'✋',t:'Pausa HITL',d:'El agente devolvió requires_human_review (score 0.48 en zona gris).',lvl:null},
+   {ic:'✅',t:'Resolución y cierre',d:'Gestor S. Lima aprobó la continuación a las 09:14. Resultado final: crédito aprobado con revisión.',lvl:null},
+ ]},
+ 'TRC-9C0B45':{canal:'Banca Online ES',ts:'10/05 11:28:04',intent:'recomendar_fondo',nivel:1,steps:[
+   {ic:'📥',t:'Recepción de petición',d:'Canal: Banca Online ES · 11:28:04',lvl:null},
+   {ic:'🧠',t:'Clasificación de intención',d:'Intención extraída: "recomendar_fondo" (confianza 0.97)',lvl:null},
+   {ic:'🔀',t:'Enrutamiento Nivel 1 (regla determinista)',d:'Regla R-WEALTH-02: dominio Wealth + intención recomendar_fondo → Recomendador Fondos. Sin escalado a LLM.',lvl:1},
+   {ic:'⚠️',t:'Cadena de fallback',d:'Recomendador Fondos degradado → reintento sobre fallback configurado. 1 reintento.',lvl:null},
+   {ic:'✅',t:'Resolución y cierre',d:'Resultado final reportado por el agente de cierre. Sin intervención humana.',lvl:null},
+ ]},
+};
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+const SEC_NAV={dashboard:'nv-obs',alertas:'nv-obs',metricas:'nv-obs',catalogo:'nv-agt',ficha:'nv-agt',onboarding:'nv-agt',prospectos:'nv-agt',hitl:'nv-gov',aprobaciones:'nv-gov',audit:'nv-gov',log:'nv-gov',registry:'nv-orq',routing:'nv-orq',traceability:'nv-orq'};
+const SEC_PERM={onboarding:'onboarding',hitl:'hitl',aprobaciones:'aprobar'};
+function doLogin(){document.getElementById('role-select').value=document.getElementById('login-role').value;changeRole();document.getElementById('login-ov').classList.add('hide');}
+function goHub(){document.getElementById('hub').style.display='block';document.getElementById('section-wrap').style.display='none';clearNav();}
+function clearNav(){document.querySelectorAll('.nv').forEach(n=>n.classList.remove('active'));document.querySelectorAll('.dd-item').forEach(d=>d.classList.remove('active-item'));}
+function goSection(id){
+  const perm=SEC_PERM[id];
+  if(perm&&!can(perm)){alert('Tu rol ('+ROLES[ROLE].n+') no tiene acceso a este módulo.');return;}
+  document.getElementById('hub').style.display='none';
+  document.getElementById('section-wrap').style.display='block';
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('sec-'+id);if(el)el.classList.add('active');
+  clearNav();
+  const nid=SEC_NAV[id];if(nid)document.getElementById(nid).classList.add('active');
+  const did=document.getElementById('ddi-'+id);if(did)did.classList.add('active-item');
+  if(id==='dashboard')initDash();
+  if(id==='metricas')initMet();
+  if(id==='catalogo')renderCatalog();
+  if(id==='log')renderLog();
+  if(id==='onboarding')initWizard();
+  if(id==='hitl')renderHitl();
+  if(id==='audit')searchAudit();
+  if(id==='prospectos')renderProspects();
+  if(id==='aprobaciones')renderApprovals();
+  if(id==='registry')renderRegistry();
+  if(id==='routing')initRouting();
+  if(id==='traceability')searchTrace();
+}
+(function(){const D=180;let timers=new Map();
+ function open(nv){clearTimeout(timers.get(nv));timers.delete(nv);document.querySelectorAll('.nv').forEach(o=>{if(o!==nv){clearTimeout(timers.get(o));o.classList.remove('dd-open');}});nv.classList.add('dd-open');}
+ function close(nv){const t=setTimeout(()=>{nv.classList.remove('dd-open');timers.delete(nv);},D);timers.set(nv,t);}
+ document.querySelectorAll('.nv').forEach(nv=>{nv.addEventListener('mouseenter',()=>open(nv));nv.addEventListener('mouseleave',()=>close(nv));const lbl=nv.querySelector('.nv-label');if(lbl)lbl.addEventListener('click',e=>{e.stopPropagation();if(nv.classList.contains('dd-open')){nv.classList.remove('dd-open');}else{open(nv);}});});
+ document.addEventListener('click',e=>{if(!e.target.closest('.nv'))document.querySelectorAll('.nv').forEach(nv=>{clearTimeout(timers.get(nv));nv.classList.remove('dd-open');});});
+})();
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const ESTADO_BADGE={Activo:'b-green','Caído':'b-red',Inactivo:'b-gray',Degradado:'b-amber',Sandbox:'b-aqua',Certificado:'b-blue',Shadowing:'b-purp',Deprecado:'b-gray'};
+function sBadge(e){return `<span class="badge ${ESTADO_BADGE[e]||'b-gray'}">${e}</span>`;}
+function critBadge(c){const m={Alta:'b-red',Media:'b-amber',Baja:'b-gray'};return `<span class="badge ${m[c]}">${c}</span>`;}
+function latSemaforo(lat){if(!lat)return '<span class="badge b-gray">—</span>';if(lat<=200)return `<span class="badge b-green">${lat}ms</span>`;if(lat<=300)return `<span class="badge b-amber">${lat}ms</span>`;return `<span class="badge b-red">${lat}ms</span>`;}
+function latBar(lat,max=400){if(!lat)return '<span class="tsm tmuted">—</span>';const pct=Math.min(100,lat/max*100);const cls=lat<=200?'lat-good':lat<=300?'lat-warn':'lat-bad';return `<div class="lat-bar" style="width:120px"><div class="lat-fill ${cls}" style="width:${pct}%"></div></div>`;}
+const OPERATIVOS=['Activo','Degradado'];
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+let chDash={};
+function initDash(){
+  const c=cnt=>AGENTS.filter(a=>a.estado===cnt).length;
+  const activos=c('Activo'),inact=c('Inactivo'),sbx=c('Sandbox')+c('Certificado'),shd=c('Shadowing'),deg=c('Degradado'),caidos=c('Caído');
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="s-label">Total agentes</div><div class="s-val">${AGENTS.length}</div><div class="s-sub">En catálogo</div></div>
+    <div class="stat-card green"><div class="s-label">Activos</div><div class="s-val">${activos}</div><div class="s-sub">Operativos</div></div>
+    <div class="stat-card"><div class="s-label">Inactivos</div><div class="s-val">${inact}</div><div class="s-sub">Apagados</div></div>
+    <div class="stat-card aqua"><div class="s-label">Sandbox / cert.</div><div class="s-val">${sbx}</div><div class="s-sub">En incorporación</div></div>
+    <div class="stat-card purp"><div class="s-label">En shadowing</div><div class="s-val">${shd}</div><div class="s-sub">Comparándose</div></div>
+    <div class="stat-card amber"><div class="s-label">Degradados</div><div class="s-val">${deg}</div><div class="s-sub">Atención</div></div>
+    <div class="stat-card red"><div class="s-label">Caídos</div><div class="s-val">${caidos}</div><div class="s-sub">Sin respuesta</div></div>`;
+  const hc=regHealthCounts();
+  const orq=document.getElementById('dash-orq');
+  if(orq)orq.innerHTML=`
+    <div class="stat-card green" style="cursor:pointer" onclick="goSection('registry')"><div class="s-label">Registry Health</div><div class="s-val">${hc.Active}/${AGENTS.length}</div><div class="s-sub"><span class="health-dot hd-active"></span>${hc.Active} Active · <span class="health-dot hd-degraded"></span>${hc.Degraded} Deg · <span class="health-dot hd-down"></span>${hc.Down} Down</div></div>
+    <div class="stat-card purp" style="cursor:pointer" onclick="goSection('routing')"><div class="s-label">Routing Decisions</div><div class="s-val">${(ROUTING_KPI.requests/1000).toFixed(1)}k</div><div class="s-sub">N1 ${(ROUTING_KPI.n1/1000).toFixed(1)}k · N2 ${(ROUTING_KPI.n2/1000).toFixed(1)}k · acc ${ROUTING_KPI.accuracy}%</div></div>
+    <div class="stat-card aqua" style="cursor:pointer" onclick="goSection('traceability')"><div class="s-label">A2A Traffic</div><div class="s-val">${AGENTS.reduce((s,a)=>s+(a.invoc_hoy||0),0).toLocaleString()}</div><div class="s-sub">Invocaciones / handoffs hoy</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="goSection('traceability')"><div class="s-label">Active Traces</div><div class="s-val">${Object.keys(TRACES).length}</div><div class="s-sub">Flujos con trace_id reconstruible</div></div>`;
+  renderDashTable();
+  const mk=(key,id,type='doughnut')=>{const m={};AGENTS.forEach(a=>m[a[key]]=(m[a[key]]||0)+1);if(chDash[id])chDash[id].destroy();
+    chDash[id]=new Chart(document.getElementById(id),{type,data:{labels:Object.keys(m),datasets:[{data:Object.values(m),backgroundColor:['#001391','#88E783','#8BE1E9','#FFB56B','#9694FF','#C8283A','#1A9E6E']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:type==='bar'?'top':'bottom'},title:{display:true,text:{'ch-pais':'Por país','ch-origen':'Interno/Tercero','ch-tipo':'Transv./Espec.'}[id]||''}}}});};
+  if(chDash.t)chDash.t.destroy();
+  chDash.t=new Chart(document.getElementById('ch-lat-trend'),{type:'line',data:{labels:['00h','04h','08h','12h','16h','20h','24h'],datasets:[{data:[195,198,201,187,182,184,187],borderColor:'#001391',backgroundColor:'rgba(0,19,145,.08)',tension:.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:160,suggestedMax:240}}}});
+  mk('dominio','ch-dist');mk('pais','ch-pais');mk('origen','ch-origen');mk('tipo','ch-tipo');
+}
+function opModalidadChange(){const prog=document.getElementById('op-modalidad').value==='Programada';document.getElementById('op-fecha-fg').classList.toggle('hide',!prog);}
+function renderDashTable(){
+  const el=document.getElementById('dash-table');if(!el)return;
+  el.innerHTML=AGENTS.map((a,i)=>`<tr>
+    <td><span class="tlink" onclick="openFicha('${a.id}')">${a.nombre}</span><br><span class="tsm tmuted">${a.id}</span></td>
+    <td>${a.pais}</td><td><span class="chip">${a.dominio}</span></td><td><span class="tsm">${a.origen}</span></td>
+    <td>${sBadge(a.estado)}</td><td>${latSemaforo(a.lat)}</td><td class="tsm">${a.exito?a.exito+'%':'—'}</td>
+    <td>${opBtn(a,i)}</td></tr>`).join('');
+}
+function opBtn(a,i){
+  if(!can('operar'))return '<span class="tsm tmuted">—</span>';
+  if(a.estado==='Activo'||a.estado==='Degradado')return `<div style="display:flex;gap:6px;justify-content:center"><button class="btn-off" onclick="openOp('${a.id}','desactivar')">Desactivar</button><button class="btn-s btn-sm" title="Reinicio lógico (OPS-01)" onclick="quickRestart('${a.id}')">⟳</button></div>`;
+  if(a.estado==='Inactivo'||a.estado==='Caído')return `<button class="btn-on" onclick="openOp('${a.id}','activar')">Activar</button>`;
+  return '<span class="tsm tmuted">—</span>';
+}
+function quickRestart(id){const a=AGENTS.find(x=>x.id===id);const m=prompt('Motivo del reinicio lógico (obligatorio · RN-04):');if(!m)return;const trace='TRC-'+Math.random().toString(16).slice(2,8).toUpperCase();a.lat=Math.round(120+Math.random()*80);LOG.unshift({ts:'Ahora',agente:a.nombre,accion:'Reinicio lógico',pais:a.pais.slice(0,2).toUpperCase(),user:ROLES[ROLE].u,motivo:m,trace,ok:true});refreshAll();alert('Reinicio lógico ejecutado sobre '+a.nombre+'. Registrado con '+trace+'.');}
+
+// ── CATALOGO ─────────────────────────────────────────────────────────────────
+function fillFilters(){
+  const uniq=k=>[...new Set(AGENTS.map(a=>a[k]))].sort();
+  document.getElementById('cf-estado').innerHTML='<option value="">Todos los estados</option>'+uniq('estado').map(e=>`<option>${e}</option>`).join('');
+  document.getElementById('cf-pais').innerHTML='<option value="">Todos los países</option>'+uniq('pais').map(e=>`<option>${e}</option>`).join('');
+  document.getElementById('cf-dominio').innerHTML='<option value="">Todos los dominios</option>'+uniq('dominio').map(e=>`<option>${e}</option>`).join('');
+}
+let catPage=1;const CAT_PP=6;let bulkSel=new Set();
+function catFiltered(){
+  const q=(document.getElementById('cf-q').value||'').toLowerCase();
+  const est=document.getElementById('cf-estado').value,pais=document.getElementById('cf-pais').value,dom=document.getElementById('cf-dominio').value,ori=document.getElementById('cf-origen').value,tip=document.getElementById('cf-tipo').value;
+  return AGENTS.filter(a=>(!est||a.estado===est)&&(!pais||a.pais===pais)&&(!dom||a.dominio===dom)&&(!ori||a.origen===ori)&&(!tip||a.tipo===tip)&&(!q||(a.nombre+a.id+a.skills.join()+a.owner+a.prov).toLowerCase().includes(q)));
+}
+function renderCatalog(){
+  const data=catFiltered();
+  const pages=Math.max(1,Math.ceil(data.length/CAT_PP));
+  if(catPage>pages)catPage=pages;
+  const slice=data.slice((catPage-1)*CAT_PP,catPage*CAT_PP);
+  document.getElementById('cat-body').innerHTML=slice.map(a=>{const i=AGENTS.indexOf(a);return `<tr>
+    <td><input type="checkbox" ${bulkSel.has(a.id)?'checked':''} onchange="toggleSel('${a.id}',this.checked)"></td>
+    <td><span class="tlink" onclick="openFicha('${a.id}')">${a.nombre}</span><br><span class="tsm tmuted">${a.id} · ${a.origen}</span></td>
+    <td class="tsm">${a.tipo}</td><td class="tsm">${a.version}</td><td>${a.dominio}<br><span class="tsm tmuted">${a.pais}</span></td>
+    <td class="tsm">${a.owner}</td><td>${critBadge(a.crit)}</td><td>${sBadge(a.estado)}</td><td class="tsm tmuted">${a.rev}</td>
+    <td style="text-align:center">${opBtn(a,i)}</td></tr>`;}).join('')||'<tr><td colspan="10" class="tmuted" style="text-align:center;padding:30px">Sin resultados.</td></tr>';
+  document.getElementById('cat-pager').innerHTML=`<span class="tsm tmuted">${data.length} agentes · página ${catPage}/${pages}</span>
+    <button onclick="catNav(-1)" ${catPage<=1?'disabled':''}>‹ Anterior</button>
+    <button onclick="catNav(1)" ${catPage>=pages?'disabled':''}>Siguiente ›</button>`;
+  updateBulkBar();
+}
+function catNav(d){catPage+=d;renderCatalog();}
+function toggleSel(id,on){on?bulkSel.add(id):bulkSel.delete(id);updateBulkBar();}
+function toggleAll(cb){catFiltered().slice((catPage-1)*CAT_PP,catPage*CAT_PP).forEach(a=>cb.checked?bulkSel.add(a.id):bulkSel.delete(a.id));renderCatalog();}
+function updateBulkBar(){const bar=document.getElementById('cat-bulk');document.getElementById('bulk-n').textContent=bulkSel.size;bar.classList.toggle('hide',bulkSel.size===0);}
+function bulkAction(acc){if(!bulkSel.size)return;alert(`Acción "${acc}" aplicada a ${bulkSel.size} agente(s) (CAT-06).`);if(acc==='Exportar selección'){const sel=AGENTS.filter(a=>bulkSel.has(a.id));dl('seleccion_agentes.csv',[['ID','Nombre','Estado'],...sel.map(a=>[a.id,a.nombre,a.estado])]);}bulkSel.clear();renderCatalog();}
+
+// ── FICHA 360 ────────────────────────────────────────────────────────────────
+let curFicha=null,chF=null;
+function openFicha(id){
+  const a=AGENTS.find(x=>x.id===id);if(!a)return;curFicha=a;
+  goSection('ficha');
+  document.getElementById('f-name').textContent=a.nombre;
+  document.getElementById('f-estado').innerHTML=sBadge(a.estado);
+  document.getElementById('f-crit').innerHTML=critBadge(a.crit)+' criticidad';
+  document.getElementById('f-desc').textContent=a.desc;
+  document.getElementById('f-title').textContent='Ficha 360 · '+a.nombre;
+  document.getElementById('f-op-btn').innerHTML=opBtn(a,AGENTS.indexOf(a));
+  // pane 0 identidad
+  document.getElementById('fp-0').innerHTML=`<div class="kv">
+    ${kv('Nombre',a.nombre)}${kv('ID',a.id)}${kv('Versión',a.version)}${kv('Origen',a.origen)}
+    ${kv('Dominio',a.dominio)}${kv('País',a.pais)}${kv('Owner funcional',a.owner)}${kv('Proveedor',a.prov)}
+    ${kv('Criticidad',a.crit)}${kv('Caso de uso',a.desc)}</div>`;
+  // pane 1 capacidades
+  document.getElementById('fp-1').innerHTML=`
+    <div class="kv-k" style="margin-bottom:6px">Skills</div><div style="margin-bottom:16px">${a.skills.map(s=>`<span class="skill-chip">${s}</span>`).join('')}</div>
+    <div class="kv">${kv('Inputs',a.inputs)}${kv('Outputs',a.outputs)}${kv('Condiciones de invocación','REST / A2A · structured context object')}${kv('Dependencias',a.fallback?'Fallback configurado':'Sin fallback')}</div>
+    <div class="kv-k" style="margin:18px 0 6px">Discovery Card</div>
+    <div class="code-box">{\n  "id": "${a.id}",\n  "skills": ${JSON.stringify(a.skills)},\n  "invocation": "REST/A2A",\n  "security": "RBAC + certificación"\n}</div>`;
+  // pane 2 estado
+  document.getElementById('fp-2').innerHTML=`<div class="kv">
+    ${kv('Estado',a.estado)}${kv('Salud',a.estado==='Activo'?'OK':a.estado==='Degradado'?'Degradado':a.estado==='Caído'?'Caído':'—')}
+    ${kv('Entorno',a.estado==='Sandbox'?'Sandbox':'Producción')}${kv('Última ejecución',a.ultima)}
+    ${kv('Latencia media',a.lat?a.lat+' ms':'—')}${kv('Invocaciones hoy',a.invoc_hoy?a.invoc_hoy.toLocaleString():'—')}</div>
+    <div class="alert-item ${a.estado==='Activo'?'ai-ok':a.estado==='Caído'?'ai-danger':'ai-warn'}" style="margin-top:16px"><span>${a.estado==='Activo'?'✅':a.estado==='Caído'?'🔴':'🟠'}</span><div><div class="ai-title">Actualización asíncrona de salud (RN-05)</div><div class="ai-desc">El estado se refresca cada 60 s desde el atributo status del Agent Registry (Agente de Salud).</div></div></div>`;
+  // pane 4 gobierno
+  document.getElementById('fp-4').innerHTML=`<div class="kv">
+    ${kv('Permisos (RBAC)','Restringido por dominio/país')}${kv('Guardrails','HITL obligatorio en zona gris')}
+    ${kv('Última revisión',a.rev)}${kv('Certificación',a.estado==='Certificado'||a.estado==='Activo'?'Vigente':'Pendiente')}</div>
+    <div class="kv-k" style="margin:18px 0 6px">Evidencias y auditoría</div>
+    <div class="alert-item ai-info"><span>🔗</span><div><div class="ai-title">Trazabilidad inmutable (GOV-03)</div><div class="ai-desc">Ver decisiones de enrutamiento y aprobaciones en el <span class="tlink" onclick="goSection('audit')">Audit Trail</span>.</div></div></div>`;
+  // pane 5 lifecycle
+  const stages=['Alta','Sandbox','Certificación','Producción','Seguimiento'];
+  const reached={Sandbox:1,Certificado:2,Activo:4,Degradado:4,Inactivo:4,'Caído':4,Deprecado:5,Shadowing:4}[a.estado]||0;
+  document.getElementById('fp-5').innerHTML=`<div class="timeline">${stages.map((s,i)=>`<div class="tl-item ${i<reached?'done':''}"><div class="tl-t">${s}</div><div class="tl-d">${i<reached?'Completado':i===reached?'En curso':'Pendiente'}</div></div>`).join('')}${a.estado==='Deprecado'?'<div class="tl-item"><div class="tl-t">Deprecación</div><div class="tl-d">Sustituido por versión más reciente</div></div>':''}</div>`;
+  fTab(0);
+}
+function kv(k,v){return `<div class="kv-row"><div class="kv-k">${k}</div><div class="kv-v">${v}</div></div>`;}
+function fTab(n){
+  document.querySelectorAll('.f360-tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.f360-pane').forEach((p,i)=>p.classList.toggle('active',i===n));
+  if(n===3&&curFicha){if(chF)chF.destroy();const base=curFicha.lat||150;
+    chF=new Chart(document.getElementById('ch-f360'),{type:'line',data:{labels:['L','M','X','J','V','S','D'],datasets:[{label:'Latencia (ms)',data:[...Array(7)].map(()=>Math.round(base+(Math.random()-.5)*40)),borderColor:'#001391',tension:.4,fill:false},{label:'Tasa éxito (%)',data:[...Array(7)].map(()=>+(curFicha.exito-Math.random()*2).toFixed(1)),borderColor:'#1A9E6E',tension:.4,fill:false,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left'},y1:{position:'right',min:85,max:100,grid:{drawOnChartArea:false}}}}});}
+}
+
+// ── OPERACIÓN ON/OFF + MAKER-CHECKER ─────────────────────────────────────────
+let currentOp=null;
+function openOp(id,action){
+  const a=AGENTS.find(x=>x.id===id);if(!a)return;
+  if(action==='desactivar'&&a.crit==='Alta'&&!can('operarCritico')){
+    // Maker-Checker: el rol puede solicitar pero no ejecutar
+  }
+  currentOp={id,action};
+  document.getElementById('op-title').textContent=(action==='activar'?'Activar agente':'Desactivar agente')+' — '+a.nombre;
+  document.getElementById('op-agente').value=`${a.nombre} · ${a.id} · ${a.pais} · ${a.crit} criticidad`;
+  const box=document.getElementById('op-alert-box'),impact=document.getElementById('op-impact'),btn=document.getElementById('op-btn');
+  const critFlow=(a.crit==='Alta'&&action==='desactivar');
+  if(action==='desactivar'){
+    box.className='alert-item ai-warn';
+    document.getElementById('op-alert-title').textContent='Vas a desactivar un agente '+(critFlow?'de ALTA criticidad':'activo');
+    document.getElementById('op-alert-desc').textContent='El agente dejará de procesar invocaciones. La acción queda registrada con trace_id en el log (RN-04).';
+    // impacto / dependencias OPS-02
+    impact.innerHTML=`<div class="card" style="margin:0;padding:14px;box-shadow:none"><div class="kv-k" style="margin-bottom:8px">Impacto y dependencias (OPS-02)</div>
+      <div class="tsm">• Canales afectados: <strong>${a.dominio} · ${a.pais}</strong></div>
+      <div class="tsm">• Invocaciones/día: <strong>${a.invoc_hoy.toLocaleString()}</strong></div>
+      <div class="tsm">• Fallback disponible: <strong style="color:${a.fallback?'var(--green)':'var(--red)'}">${a.fallback?'Sí':'No — sin alternativa'}</strong></div></div>`;
+    btn.className='btn btn-danger';
+  }else{
+    box.className='alert-item ai-ok';
+    document.getElementById('op-alert-title').textContent='Vas a activar un agente';
+    document.getElementById('op-alert-desc').textContent='El agente comenzará a procesar invocaciones. La acción queda registrada con trace_id.';
+    impact.innerHTML='';btn.className='btn btn-p';
+  }
+  if(critFlow){
+    if(can('operarCritico')){
+      btn.textContent='Aprobar y desactivar (Maker-Checker)';
+      box.className='alert-item ai-danger';
+      impact.innerHTML+=`<div class="alert-item ai-danger" style="margin-top:10px"><span>🔐</span><div><div class="ai-title">Doble validación requerida (RN-03)</div><div class="ai-desc">Como Product Owner del Hub, tu confirmación actúa como checker. Quedará registrada la doble firma.</div></div></div>`;
+    }else{
+      btn.textContent='Enviar solicitud de aprobación';
+      impact.innerHTML+=`<div class="alert-item ai-warn" style="margin-top:10px"><span>✋</span><div><div class="ai-title">Requiere aprobación (Maker-Checker · RN-03)</div><div class="ai-desc">Tu rol puede iniciar la solicitud, pero un Product Owner del Hub debe aprobarla antes de ejecutarse.</div></div></div>`;
+    }
+  }else{
+    btn.textContent=action==='activar'?'Activar agente':'Desactivar agente';
+  }
+  document.getElementById('op-motivo').value='';
+  document.getElementById('op-modalidad').value='Inmediata';
+  document.getElementById('op-fecha-fg').classList.add('hide');
+  document.getElementById('op-rollback-fg').classList.toggle('hide',action!=='activar');
+  document.getElementById('op-rollback').checked=false;
+  openModal('modal-op');
+}
+function confirmOp(){
+  const motivo=document.getElementById('op-motivo').value.trim();
+  if(!motivo){alert('Introduce un motivo (obligatorio · RN-04).');return;}
+  const a=AGENTS.find(x=>x.id===currentOp.id);
+  const critFlow=(a.crit==='Alta'&&currentOp.action==='desactivar');
+  const modalidad=document.getElementById('op-modalidad').value;
+  const fecha=document.getElementById('op-fecha').value;
+  const trace='TRC-'+Math.random().toString(16).slice(2,8).toUpperCase();
+  if(critFlow&&!can('operarCritico')){
+    APPROVALS.unshift({id:Date.now(),agente:a.nombre,agId:a.id,accion:currentOp.action,motivo,solicitante:ROLES[ROLE].u,ts:'Ahora',trace,modalidad,estado:'Pendiente'});
+    LOG.unshift({ts:'Ahora',agente:a.nombre,accion:'Solicitud apagado',pais:a.pais.slice(0,2).toUpperCase(),user:ROLES[ROLE].u,motivo:motivo+' (pend. aprobación)',trace,ok:true});
+    closeModal('modal-op');refreshAll();
+    alert('Solicitud enviada al Centro de aprobaciones del Product Owner del Hub (Maker-Checker · RN-03).');return;
+  }
+  if(modalidad==='Programada'&&fecha){
+    LOG.unshift({ts:'Ahora',agente:a.nombre,accion:'Programado',pais:a.pais.slice(0,2).toUpperCase(),user:ROLES[ROLE].u,motivo:motivo+' (para '+fecha.replace('T',' ')+')',trace,ok:true});
+    closeModal('modal-op');refreshAll();
+    alert('Operación programada para '+fecha.replace('T',' ')+'. Registrada con '+trace+'.');return;
+  }
+  const nuevo=currentOp.action==='activar'?'Activo':'Inactivo';
+  a.estado=nuevo;a.lat=nuevo==='Activo'?Math.round(150+Math.random()*100):null;a.exito=nuevo==='Activo'?+(96+Math.random()*3).toFixed(1):0;
+  LOG.unshift({ts:'Ahora',agente:a.nombre,accion:nuevo==='Activo'?'Activado':'Desactivado',pais:a.pais.slice(0,2).toUpperCase(),user:ROLES[ROLE].u,motivo,trace,ok:true});
+  closeModal('modal-op');refreshAll();
+  alert(`Agente ${nuevo==='Activo'?'activado':'desactivado'}. Registrado con ${trace}.`);
+}
+
+// ── WIZARD ───────────────────────────────────────────────────────────────────
+const WZ_TITLES=['Datos funcionales','Discovery Card','Riesgos y permisos','Sandbox A2A','Publicación'];
+let wzStep=0,wzSandboxOK=false;
+function initWizard(){wzStep=0;wzSandboxOK=false;renderWzSteps();showWzPane();}
+function renderWzSteps(){
+  document.getElementById('wz-steps').innerHTML=WZ_TITLES.map((t,i)=>`<div class="wz-step ${i===wzStep?'active':i<wzStep?'done':''}"><div class="wz-num">${i<wzStep?'✓':i+1}</div>${t}</div>`).join('');
+}
+function showWzPane(){
+  document.querySelectorAll('.wz-pane').forEach((p,i)=>p.classList.toggle('active',i===wzStep));
+  document.getElementById('wz-prev').style.visibility=wzStep===0?'hidden':'visible';
+  document.getElementById('wz-next').textContent=wzStep===WZ_TITLES.length-1?'Publicar agente':'Siguiente →';
+  document.getElementById('wz-validate').textContent='';
+}
+function wzNav(d){
+  if(d>0){
+    if(wzStep===3&&!wzSandboxOK){document.getElementById('wz-validate').textContent='⚠ Ejecuta y supera la prueba de Sandbox antes de continuar (ONB-05).';return;}
+    if(wzStep===WZ_TITLES.length-1){publishAgent();return;}
+  }
+  wzStep=Math.max(0,Math.min(WZ_TITLES.length-1,wzStep+d));
+  renderWzSteps();showWzPane();
+}
+function runSandbox(){
+  const cons=document.getElementById('wz-console');
+  cons.innerHTML='<span class="muted">→ POST /a2a/invoke (sandbox)…</span>';
+  setTimeout(()=>{cons.innerHTML=`<span class="muted">→ POST /a2a/invoke (sandbox)</span>\n<span class="muted">→ structured_context_object validado ✓</span>\n<span class="ok">← 200 OK · 142 ms</span>\n{\n  <span class="key">"trace_id"</span>: "TRC-SBX-0091",\n  <span class="key">"status"</span>: "<span class="ok">success</span>",\n  <span class="key">"output"</span>: { "recomendacion": "producto_A", "score": 0.82 }\n}`;wzSandboxOK=true;document.getElementById('wz-validate').textContent='✓ Prueba superada.';},700);
+}
+function publishAgent(){
+  const nombre=document.getElementById('wz-nombre').value||'Nuevo Agente';
+  const id='AGT-'+String(20+AGENTS.length).padStart(3,'0');
+  AGENTS.push({id,nombre,pais:document.getElementById('wz-pais').value,dominio:document.getElementById('wz-dominio').value||'General',origen:document.getElementById('wz-origen').value,owner:ROLES[ROLE].u,version:'v0.1',crit:document.getElementById('wz-crit').value,estado:'Sandbox',lat:null,invoc_hoy:0,exito:0,hitl:0,ultima:'En pruebas',rev:'2026-05-18',prov:document.getElementById('wz-origen').value==='Interno'?'In-house':'Tercero',fallback:document.getElementById('wz-fallback').value==='Sí',skills:(document.getElementById('wz-skills').value||'skill').split(',').map(s=>s.trim()),inputs:document.getElementById('wz-inputs').value,outputs:document.getElementById('wz-outputs').value,desc:document.getElementById('wz-problema').value});
+  alert(`Agente "${nombre}" creado en estado SANDBOX (${id}) a la espera de firma de publicación del PO.`);
+  fillFilters();goSection('catalogo');
+}
+
+// ── HITL ─────────────────────────────────────────────────────────────────────
+let curHitl=null;
+function renderHitl(){
+  const pend=HITL.filter(h=>h.estado==='Pendiente');
+  document.getElementById('hitl-count').textContent=pend.length+' abiertas';
+  document.getElementById('hitl-badge').textContent=pend.length;
+  document.getElementById('hitl-list').innerHTML=HITL.map(h=>`<div class="hitl-item ${h.estado!=='Pendiente'?'resolved':''} ${curHitl===h.id?'sel':''}" onclick="selHitl(${h.id})">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="fw7 tsm">${h.agente}</span><span class="badge ${h.estado==='Pendiente'?'b-amber':'b-green'}">${h.estado}</span></div>
+    <div class="tsm tmuted" style="margin-top:5px">${h.motivo}</div>
+    <div class="tsm tmuted" style="margin-top:6px"><code>${h.trace}</code> · ${h.ts}</div></div>`).join('');
+  if(curHitl==null)document.getElementById('hitl-detail').innerHTML='<div class="no-perm">Selecciona una solicitud de la bandeja para revisarla.</div>';
+}
+function selHitl(id){
+  curHitl=id;const h=HITL.find(x=>x.id===id);renderHitl();
+  const resolved=h.estado!=='Pendiente';
+  document.getElementById('hitl-detail').innerHTML=`
+    <div class="card-header"><h2>${h.agente}</h2><span class="badge ${resolved?'b-green':'b-amber'}">${h.estado}</span></div>
+    <div class="kv" style="margin-bottom:16px">${kv('trace_id',h.trace)}${kv('Entrada',h.ts)}${kv('Motivo de derivación',h.motivo)}${kv('Señal','requires_human_review')}</div>
+    <div class="kv-k" style="margin-bottom:6px">Structured Context Object</div>
+    <div class="code-box" style="margin-bottom:16px">${h.ctx}</div>
+    ${resolved?'<div class="alert-item ai-ok"><span>✅</span><div><div class="ai-title">Resuelto</div><div class="ai-desc">El Orquestador recibió POST /orchestrator/resume y continuó el flujo.</div></div></div>':
+    can('aprobar')||can('hitl')?`
+    <div class="fg"><label>Enmienda de datos (opcional)</label><textarea class="inp" id="hitl-edit" placeholder="Modificar el context object si procede…"></textarea></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-p" onclick="resolveHitl(${id},'Aprobado')">Aprobar</button><button class="btn btn-danger" onclick="resolveHitl(${id},'Rechazado')">Rechazar</button><button class="btn btn-s" onclick="resolveHitl(${id},'Modificado')">Modificar y reanudar</button></div>`:
+    '<div class="alert-item ai-warn"><span>🔒</span><div><div class="ai-title">Sin permiso de resolución</div><div class="ai-desc">Tu rol puede consultar pero no resolver intervenciones HITL.</div></div></div>'}`;
+}
+function resolveHitl(id,decision){
+  const h=HITL.find(x=>x.id===id);h.estado=decision;
+  LOG.unshift({ts:'Ahora',agente:h.agente,accion:'HITL '+decision,pais:'ES',user:ROLES[ROLE].u,motivo:'Resolución bandeja HITL',trace:h.trace,ok:true});
+  alert(`Decisión "${decision}" enviada al Orquestador (POST /orchestrator/resume) con ${h.trace}.`);
+  curHitl=null;renderHitl();
+}
+
+// ── AUDIT ────────────────────────────────────────────────────────────────────
+function searchAudit(){
+  const q=(document.getElementById('audit-q').value||'').trim().toUpperCase();
+  const d=AUDIT_DATA[q];
+  const box=document.getElementById('audit-result');
+  if(!d){box.innerHTML='<div class="card"><div class="no-perm">No se encontró el trace_id <code>'+q+'</code>. Prueba TRC-7F3A21 o TRC-9C0B45.</div></div>';return;}
+  box.innerHTML=`<div class="card">
+    <div class="card-header"><h2>Ciclo de vida · <code>${q}</code></h2><span class="lvl-pill ${d.nivel===2?'lvl2':'lvl1'}">Resuelto en Nivel ${d.nivel}</span></div>
+    <div class="kv" style="margin-bottom:16px">${kv('Canal de origen',d.canal)}${kv('Timestamp',d.ts)}${kv('Intención',d.intent)}${kv('Enrutamiento',d.nivel===2?'Nivel 2 · clasificador LLM':'Nivel 1 · regla determinista')}</div>
+    ${d.steps.map(s=>`<div class="audit-step"><div class="audit-ic">${s.ic}</div><div style="flex:1"><div class="fw7 tsm">${s.t} ${s.lvl?`<span class="lvl-pill ${s.lvl===2?'lvl2':'lvl1'}">Nivel ${s.lvl}</span>`:''}</div><div class="tsm tmuted" style="margin-top:3px">${s.d}</div></div></div>`).join('')}
+    <div class="alert-item ai-info" style="margin-top:16px"><span>🔗</span><div><div class="ai-title">Micro-registros unificados por trace_id (CU-05)</div><div class="ai-desc">Reproducible y exportable a Excel/CSV para justificaciones ante auditorías regulatorias.</div></div></div>
+  </div>`;
+}
+
+// ── LOG / EXPORT ─────────────────────────────────────────────────────────────
+function renderLog(){
+  document.getElementById('log-body').innerHTML=LOG.map(l=>`<tr>
+    <td class="tsm tmuted">${l.ts}</td><td class="fw7">${l.agente}</td>
+    <td><span class="badge ${l.accion.includes('Desactiv')||l.accion.includes('Rechaz')?'b-red':l.accion.includes('Solicitud')?'b-amber':'b-green'}">${l.accion}</span></td>
+    <td>${l.pais}</td><td>${l.user}</td><td class="tsm">${l.motivo}</td><td class="tsm"><code>${l.trace||'—'}</code></td>
+    <td><span class="badge ${l.ok?'b-green':'b-amber'}">${l.ok?'OK':'Error'}</span></td></tr>`).join('');
+}
+function dl(name,rows){const csv=rows.map(r=>r.map(c=>`"${(c??'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob([csv],{type:'text/csv'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+function exportCSV(){dl('catalogo_agentes.csv',[['ID','Nombre','Version','Dominio','Pais','Origen','Owner','Criticidad','Estado','Revision'],...AGENTS.map(a=>[a.id,a.nombre,a.version,a.dominio,a.pais,a.origen,a.owner,a.crit,a.estado,a.rev])]);}
+function exportLog(){dl('log_operaciones.csv',[['Fecha','Agente','Accion','Pais','Usuario','Motivo','trace_id','Resultado'],...LOG.map(l=>[l.ts,l.agente,l.accion,l.pais,l.user,l.motivo,l.trace,l.ok?'OK':'Error'])]);}
+function exportAudit(){const q=document.getElementById('audit-q').value.trim().toUpperCase();const d=AUDIT_DATA[q];if(!d){alert('Busca primero un trace_id válido.');return;}dl('audit_'+q+'.csv',[['trace_id','paso','detalle','nivel'],...d.steps.map(s=>[q,s.t,s.d,s.lvl||''])]);}
+
+// ── METRICAS ─────────────────────────────────────────────────────────────────
+let chMet={};
+function initMet(){
+  document.getElementById('lat-table-detail').innerHTML=[...AGENTS].filter(a=>a.lat).sort((a,b)=>b.lat-a.lat).map(a=>`<tr>
+    <td class="fw7">${a.nombre}</td><td>${a.pais}</td><td>${latSemaforo(a.lat)}</td><td class="tsm">${Math.round(a.lat*1.4)}ms</td><td>${latBar(a.lat,400)}</td>
+    <td class="tsm">${a.exito}%</td><td class="tsm">${a.hitl}%</td><td class="tsm">${a.fallback?'Sí':'—'}</td>
+    <td>${a.lat<=200?'<span class="badge b-green">Óptimo</span>':a.lat<=300?'<span class="badge b-amber">Aceptable</span>':'<span class="badge b-red">Sobre umbral</span>'}</td></tr>`).join('');
+  if(chMet.e)chMet.e.destroy();
+  chMet.e=new Chart(document.getElementById('ch-err'),{type:'bar',data:{labels:['Conectividad','Permisos','Degradación','Timeout','Calidad'],datasets:[{data:[12,3,18,24,9],backgroundColor:['#C8283A','#FFB56B','#9694FF','#001391','#8BE1E9'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  if(chMet.m)chMet.m.destroy();
+  const acts=AGENTS.filter(a=>a.lat).slice(0,5);const colors=['#001391','#88E783','#8BE1E9','#FFB56B','#9694FF'];
+  chMet.m=new Chart(document.getElementById('ch-lat-multi'),{type:'line',data:{labels:['L','M','X','J','V','S','D'],datasets:acts.map((a,i)=>({label:a.nombre.split(' ').slice(0,2).join(' '),data:[...Array(7)].map(()=>Math.round(a.lat+(Math.random()-.5)*30)),borderColor:colors[i],tension:.4,fill:false}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{min:50,suggestedMax:350}}}});
+}
+
+// ── PROSPECTOS (REG) ─────────────────────────────────────────────────────────
+const REG_BADGE={Detectado:'b-aqua','En análisis':'b-amber','En shadowing':'b-purp',Aprobado:'b-green',Rechazado:'b-gray',Archivado:'b-gray'};
+function renderProspects(){
+  const c=s=>PROSPECTS.filter(p=>p.estado===s).length;
+  document.getElementById('reg-stats').innerHTML=`
+    <div class="stat-card aqua"><div class="s-label">Detectados</div><div class="s-val">${c('Detectado')}</div><div class="s-sub">Nuevos candidatos</div></div>
+    <div class="stat-card amber"><div class="s-label">En análisis</div><div class="s-val">${c('En análisis')}</div><div class="s-sub">Evaluación funcional</div></div>
+    <div class="stat-card purp"><div class="s-label">En shadowing</div><div class="s-val">${c('En shadowing')}</div><div class="s-sub">Comparándose</div></div>
+    <div class="stat-card"><div class="s-label">Total pipeline</div><div class="s-val">${PROSPECTS.length}</div><div class="s-sub">Candidatos</div></div>`;
+  document.getElementById('reg-body').innerHTML=PROSPECTS.map(p=>`<tr>
+    <td><span class="tlink" onclick="cmpProspect('${p.id}')">${p.nombre}</span><br><span class="tsm tmuted">${p.id}${p.sustituye?' · sustituye '+p.sustituye:''}</span></td>
+    <td class="tsm">${p.fuente}</td><td><span class="chip">${p.dominio}</span></td><td class="tsm">${p.prov}</td>
+    <td class="tsm">${p.madurez}</td><td class="tsm">${p.esfuerzo}</td><td><span class="badge ${REG_BADGE[p.estado]}">${p.estado}</span></td>
+    <td style="text-align:center;white-space:nowrap"><button class="btn-s btn-sm" onclick="cmpProspect('${p.id}')">Comparar</button> ${p.estado!=='Rechazado'&&p.estado!=='Archivado'?`<button class="btn-on" onclick="regAction('${p.id}','shadowing')">Shadowing</button> <button class="btn-off" onclick="regAction('${p.id}','rechazo')">Rechazar</button>`:''}</td></tr>`).join('');
+}
+function cmpProspect(id){
+  const p=PROSPECTS.find(x=>x.id===id);const cur=AGENTS.find(a=>a.id===p.sustituye);
+  document.getElementById('cmp-title').textContent='Comparación · '+p.nombre;
+  const better=k=>`<div class="cmp-better">${p.mejoras[k]}</div>`;
+  document.getElementById('cmp-body').innerHTML=`
+    <p class="tsm tmuted" style="margin-bottom:14px">${p.desc} <span class="req-tag">REG-03 · REG-04</span></p>
+    <div class="cmp-grid">
+      <div class="cmp-col"><div class="kv-k">Agente actual</div><div class="fw9" style="margin:4px 0 10px">${cur?cur.nombre:'— (sin equivalente)'}</div>
+        ${cur?`<div class="kv-row"><div class="kv-k">Latencia</div><div class="kv-v">${cur.lat||'—'} ms</div></div><div class="kv-row" style="margin-top:8px"><div class="kv-k">Éxito</div><div class="kv-v">${cur.exito}%</div></div><div class="kv-row" style="margin-top:8px"><div class="kv-k">Criticidad</div><div class="kv-v">${cur.crit}</div></div>`:''}</div>
+      <div class="cmp-col win"><div class="kv-k">Candidato</div><div class="fw9" style="margin:4px 0 10px">${p.nombre}</div>
+        <div class="kv-row"><div class="kv-k">Precisión</div>${better('Precisión')}</div>
+        <div class="kv-row" style="margin-top:8px"><div class="kv-k">Latencia</div>${better('Latencia')}</div>
+        <div class="kv-row" style="margin-top:8px"><div class="kv-k">Coste</div>${better('Coste')}</div>
+        <div class="kv-row" style="margin-top:8px"><div class="kv-k">Cobertura</div>${better('Cobertura')}</div>
+      </div>
+    </div>
+    <div class="alert-item ai-info" style="margin-top:14px"><span>📊</span><div><div class="ai-title">Justificación de mejora (REG-04)</div><div class="ai-desc">Precisión ${p.mejoras['Precisión']}, latencia ${p.mejoras['Latencia']}, coste ${p.mejoras['Coste']}. Esfuerzo de integración estimado: ${p.esfuerzo}.</div></div></div>`;
+  document.getElementById('cmp-eval').onclick=()=>{closeModal('modal-cmp');regAction(id,'shadowing');};
+  openModal('modal-cmp');
+}
+function regAction(id,acc){
+  const p=PROSPECTS.find(x=>x.id===id);
+  if(acc==='shadowing'){p.estado='En shadowing';alert('Shadow test lanzado para "'+p.nombre+'". (El módulo de shadowing es evolución futura — CU-06.)');}
+  else{p.estado='Rechazado';alert('Candidato "'+p.nombre+'" rechazado y archivado.');}
+  renderProspects();
+}
+
+// ── CENTRO DE APROBACIONES (Maker-Checker) ──────────────────────────────────
+function renderApprovals(){
+  const pend=APPROVALS.filter(a=>a.estado==='Pendiente');
+  const card=document.getElementById('appr-card');
+  if(!APPROVALS.length){card.innerHTML='<div class="no-perm">No hay solicitudes de aprobación. Las operaciones sobre agentes de alta criticidad solicitadas por roles sin permiso de checker aparecerán aquí.</div>';return;}
+  card.innerHTML=`<div class="card-header"><h2>Solicitudes</h2><span class="badge b-amber">${pend.length} pendientes</span></div>`+APPROVALS.map(a=>`
+    <div class="alert-item ${a.estado==='Pendiente'?'ai-warn':a.estado==='Aprobada'?'ai-ok':'ai-danger'}">
+      <span>${a.estado==='Pendiente'?'⏳':a.estado==='Aprobada'?'✅':'⛔'}</span>
+      <div style="flex:1"><div class="ai-title">${a.accion==='desactivar'?'Desactivar':'Activar'} · ${a.agente} <span class="badge b-red" style="margin-left:6px">Alta criticidad</span></div>
+        <div class="ai-desc">Solicitante: <strong>${a.solicitante}</strong> · ${a.ts} · <code>${a.trace}</code><br>Motivo: ${a.motivo} · Modalidad: ${a.modalidad}</div>
+        ${a.estado==='Pendiente'?(can('operarCritico')?`<div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-p btn-sm" onclick="resolveAppr(${a.id},true)">Aprobar y ejecutar</button><button class="btn btn-danger btn-sm" onclick="resolveAppr(${a.id},false)">Rechazar</button></div>`:'<div class="ai-time">Esperando aprobación de un Product Owner del Hub (checker).</div>'):`<div class="ai-time">Resuelta por ${a.checker||'—'}</div>`}
+      </div></div>`).join('');
+}
+function resolveAppr(id,ok){
+  const ap=APPROVALS.find(x=>x.id===id);ap.estado=ok?'Aprobada':'Rechazada';ap.checker=ROLES[ROLE].u;
+  const ag=AGENTS.find(x=>x.id===ap.agId);
+  if(ok&&ag){ag.estado='Inactivo';ag.lat=null;ag.exito=0;
+    LOG.unshift({ts:'Ahora',agente:ap.agente,accion:'Desactivado',pais:'ES',user:ROLES[ROLE].u,motivo:ap.motivo+' (aprobado Maker-Checker)',trace:ap.trace,ok:true});}
+  alert('Solicitud '+(ok?'aprobada y ejecutada':'rechazada')+' (doble validación RN-03).');
+  refreshAll();renderApprovals();
+}
+
+// ══════════ AGENT REGISTRY CENTER (Mejora #1) ══════════
+function regHealthCounts(){const c={Active:0,Degraded:0,Down:0,Sandbox:0};AGENTS.forEach(a=>c[a.health]++);return c;}
+function renderRegistry(){
+  const c=regHealthCounts();
+  const skills=new Set();AGENTS.forEach(a=>a.skills.forEach(s=>skills.add(s)));
+  document.getElementById('reg-kpis').innerHTML=`
+    <div class="stat-card"><div class="s-label">Agentes registrados</div><div class="s-val">${AGENTS.length}</div><div class="s-sub">En el Agent Registry</div></div>
+    <div class="stat-card green"><div class="s-label">Active</div><div class="s-val">${c.Active}</div><div class="s-sub">Operativos · A2A OK</div></div>
+    <div class="stat-card amber"><div class="s-label">Degraded</div><div class="s-val">${c.Degraded}</div><div class="s-sub">Latencia / calidad</div></div>
+    <div class="stat-card red"><div class="s-label">Down</div><div class="s-val">${c.Down}</div><div class="s-sub">Sin respuesta / off</div></div>
+    <div class="stat-card aqua"><div class="s-label">Sandbox</div><div class="s-val">${c.Sandbox}</div><div class="s-sub">Skills registradas: ${skills.size}</div></div>`;
+  const q=(document.getElementById('rg-q').value||'').toLowerCase();
+  const hf=document.getElementById('rg-health').value;
+  const data=AGENTS.filter(a=>(!hf||a.health===hf)&&(!q||(a.id+a.nombre+a.skills.join()+a.owner+a.a2a+a.dominio).toLowerCase().includes(q)));
+  document.getElementById('reg-table-body').innerHTML=data.map(a=>`<tr>
+    <td><span class="mono">${a.id}</span></td>
+    <td><span class="tlink" onclick="openAgentCard('${a.id}')">${a.nombre}</span></td>
+    <td class="tsm">${a.version}</td>
+    <td><span class="badge ${HEALTH_BADGE[a.health]}">${a.health}</span></td>
+    <td>${a.skills.slice(0,2).map(s=>`<span class="chip" style="margin:1px">${s}</span>`).join('')}${a.skills.length>2?`<span class="tsm tmuted"> +${a.skills.length-2}</span>`:''}</td>
+    <td class="tsm">${a.owner}</td><td><span class="chip">${a.dominio}</span></td>
+    <td><span class="endpoint">${a.a2a}</span></td>
+    <td class="tsm">${a.exito?a.exito+'%':'—'}</td><td>${latSemaforo(a.lat)}</td>
+    <td class="tsm tmuted">${a.lastHealth}</td></tr>`).join('')||'<tr><td colspan="11" class="tmuted" style="text-align:center;padding:30px">Sin resultados.</td></tr>';
+  renderRelationships();
+}
+function relBoxCls(h){return h==='Degraded'?'deg':h==='Down'?'down':h==='Sandbox'?'sbx':'';}
+function renderRelationships(){
+  document.getElementById('reg-rel').innerHTML=RELATIONSHIPS.map(r=>{
+    const nodes=r.chain.map(id=>{const a=AGENTS.find(x=>x.id===id);return a?`
+      <div class="rel-node" onclick="openAgentCard('${a.id}')">
+        <div class="rel-box ${relBoxCls(a.health)}"><div class="rb-name">${a.nombre}</div><div class="rb-id">${a.id} · ${a.health}</div></div>
+      </div>`:'';}).join('<div class="rel-arrow">→</div>');
+    return `<div style="flex:1;min-width:100%"><div class="kv-k" style="margin-bottom:8px">${r.nombre}</div><div class="rel-chain">${nodes}</div></div>`;
+  }).join('');
+}
+function openAgentCard(id){
+  const a=AGENTS.find(x=>x.id===id);if(!a)return;
+  const related=RELATIONSHIPS.filter(r=>r.chain.includes(id)).flatMap(r=>{const i=r.chain.indexOf(id);return [r.chain[i-1],r.chain[i+1]];}).filter(Boolean);
+  const relNames=[...new Set(related)].map(rid=>{const x=AGENTS.find(y=>y.id===rid);return x?x.nombre:rid;});
+  document.getElementById('card-title').textContent='Agent Card · '+a.nombre;
+  document.getElementById('card-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-family:'Nunito Sans',sans-serif;font-size:20px;font-weight:700">${a.nombre}</span>
+      <span class="badge ${HEALTH_BADGE[a.health]}">${a.health}</span>${critBadge(a.crit)}
+      <span class="endpoint">${a.a2a}</span></div>
+    <p class="tsm tmuted" style="margin-bottom:16px">${a.desc}</p>
+    <div class="kv" style="margin-bottom:16px">
+      ${kv('Agent ID',a.id)}${kv('Versión',a.version)}${kv('Dominio',a.dominio+' · '+a.pais)}${kv('Owner',a.owner)}
+      ${kv('Origen / Proveedor',a.origen+' · '+a.prov)}${kv('Success rate',a.exito?a.exito+'%':'—')}${kv('Avg latency',a.lat?a.lat+' ms':'—')}${kv('Last health check',a.lastHealth)}</div>
+    <div class="kv-k" style="margin-bottom:6px">Skills / Capacidades</div>
+    <div style="margin-bottom:16px">${a.skills.map(s=>`<span class="skill-chip">${s}</span>`).join('')}</div>
+    <div class="kv" style="margin-bottom:16px">${kv('Inputs',a.inputs)}${kv('Outputs',a.outputs)}${kv('Dependencias',a.fallback?'Fallback configurado':'Sin fallback')}${kv('Agentes relacionados (A2A)',relNames.length?relNames.join(', '):'—')}</div>
+    <div class="kv-k" style="margin-bottom:6px">Metadata (Agent Card · A2A)</div>
+    <div class="code-box">{
+  <span class="key">"agent_id"</span>: "${a.id}",
+  <span class="key">"name"</span>: "${a.nombre}",
+  <span class="key">"version"</span>: "${a.version}",
+  <span class="key">"status"</span>: "${a.health}",
+  <span class="key">"a2a_endpoint"</span>: "${a.a2a}",
+  <span class="key">"skills"</span>: ${JSON.stringify(a.skills)},
+  <span class="key">"invocation"</span>: "REST/A2A · structured_context_object",
+  <span class="key">"security"</span>: "RBAC + certificación",
+  <span class="key">"success_rate"</span>: ${a.exito||0},
+  <span class="key">"avg_latency_ms"</span>: ${a.lat||0}
+}</div>`;
+  document.getElementById('card-ficha').onclick=()=>{closeModal('modal-card');openFicha(a.id);};
+  openModal('modal-card');
+}
+function exportRegistry(){dl('agent_registry.csv',[['Agent ID','Name','Version','Status','Skills','Owner','Domain','A2A Endpoint','Success','Avg Latency','Last Health'],...AGENTS.map(a=>[a.id,a.nombre,a.version,a.health,a.skills.join('|'),a.owner,a.dominio,a.a2a,a.exito,a.lat||'',a.lastHealth])]);}
+
+// ══════════ ROUTING DECISION CENTER (Mejora #2) ══════════
+let chRoute={};
+function initRouting(){
+  document.getElementById('route-kpis').innerHTML=`
+    <div class="stat-card"><div class="s-label">Requests Today</div><div class="s-val">${ROUTING_KPI.requests.toLocaleString()}</div><div class="s-sub">Peticiones enrutadas</div></div>
+    <div class="stat-card green"><div class="s-label">Nivel 1 (Reglas)</div><div class="s-val">${ROUTING_KPI.n1.toLocaleString()}</div><div class="s-sub">${(ROUTING_KPI.n1/ROUTING_KPI.requests*100).toFixed(0)}% determinista</div></div>
+    <div class="stat-card purp"><div class="s-label">Nivel 2 (LLM)</div><div class="s-val">${ROUTING_KPI.n2.toLocaleString()}</div><div class="s-sub">${(ROUTING_KPI.n2/ROUTING_KPI.requests*100).toFixed(0)}% clasificación</div></div>
+    <div class="stat-card aqua"><div class="s-label">Routing Accuracy</div><div class="s-val">${ROUTING_KPI.accuracy}%</div><div class="s-sub">Acierto de enrutamiento</div></div>
+    <div class="stat-card"><div class="s-label">Avg Routing Time</div><div class="s-val">${ROUTING_KPI.avgTime}ms</div><div class="s-sub">Decisión por petición</div></div>`;
+  document.getElementById('route-rules-body').innerHTML=ROUTING_RULES.map(r=>{const a=AGENTS.find(x=>x.id===r.agent);return `<tr>
+    <td><span class="mono">${r.id}</span></td><td class="fw7">${r.name}</td><td class="tsm mono">${r.cond}</td>
+    <td>${a?`<span class="tlink" onclick="openAgentCard('${a.id}')">${a.nombre}</span>`:r.agent}</td>
+    <td><span class="badge ${r.prio===1?'b-blue':'b-gray'}">P${r.prio}</span></td>
+    <td><span class="badge ${r.status==='Activa'?'b-green':'b-gray'}">${r.status}</span></td></tr>`;}).join('');
+  document.getElementById('route-llm-body').innerHTML=LLM_DECISIONS.map(d=>{const a=AGENTS.find(x=>x.id===d.agent);return `<tr>
+    <td class="tsm">${d.prompt}</td><td>${a?`<span class="tlink" onclick="openAgentCard('${a.id}')">${a.nombre}</span>`:d.agent}</td>
+    <td><span class="badge ${d.conf>=0.85?'b-green':d.conf>=0.7?'b-amber':'b-red'}">${d.conf.toFixed(2)}</span></td>
+    <td class="tsm tmuted">${d.ts}</td></tr>`;}).join('');
+  if(chRoute.mix)chRoute.mix.destroy();
+  chRoute.mix=new Chart(document.getElementById('ch-route-mix'),{type:'doughnut',data:{labels:['Nivel 1 · Reglas','Nivel 2 · LLM'],datasets:[{data:[ROUTING_KPI.n1,ROUTING_KPI.n2],backgroundColor:['#88E783','#9694FF']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:'Nivel 1 vs Nivel 2'}}}});
+  if(chRoute.tr)chRoute.tr.destroy();
+  chRoute.tr=new Chart(document.getElementById('ch-route-trend'),{type:'line',data:{labels:['L','M','X','J','V','S','D'],datasets:[{label:'Accuracy %',data:[95.1,95.8,96.0,96.4,96.2,96.7,96.4],borderColor:'#001391',tension:.4,fill:false,yAxisID:'y'},{label:'Latency ms',data:[48,45,46,42,44,41,42],borderColor:'#8BE1E9',tension:.4,fill:false,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left',min:90,max:100},y1:{position:'right',min:0,max:80,grid:{drawOnChartArea:false}}}}});
+}
+function simulateRouting(){
+  const op=document.getElementById('sim-op').value,dom=document.getElementById('sim-dom').value,chan=document.getElementById('sim-chan').value,txt=document.getElementById('sim-text').value.trim();
+  // Nivel 1: ¿hay regla determinista activa que matchee operation_type?
+  let rule=ROUTING_RULES.find(r=>r.status==='Activa'&&r.cond.includes(op));
+  let nivel,agent,confidence,motivo,ruleTxt;
+  const trace='TRC-'+Math.random().toString(16).slice(2,8).toUpperCase();
+  if(rule){
+    nivel=1;agent=AGENTS.find(a=>a.id===rule.agent);confidence=0.99;
+    ruleTxt=rule.id+': '+op+' → '+(agent?agent.nombre:rule.agent);
+    motivo='Coincidencia determinista directa con una regla activa del repositorio (Nivel 1). No se requiere clasificación LLM.';
+  }else{
+    nivel=2;
+    // simulación de clasificador LLM por dominio
+    const byDom={Marketing:'AGT-021',Riesgo:'AGT-004',Compliance:'AGT-008',Legal:'AGT-017','Banca Retail':'AGT-001',Wealth:'AGT-007'};
+    agent=AGENTS.find(a=>a.id===(byDom[dom]||'AGT-008'));
+    confidence=+(0.72+Math.random()*0.2).toFixed(2);
+    ruleTxt='— (sin regla determinista) → escalado a clasificador LLM';
+    motivo='Ninguna regla determinista resolvió la petición. El clasificador LLM evaluó candidatos del Registry por dominio "'+dom+'"'+(txt?' y el texto libre proporcionado':'')+' y seleccionó el de mayor afinidad.';
+  }
+  const cls=nivel===1?'n1':'n2';
+  document.getElementById('sim-out').innerHTML=`
+    <div class="sim-result">
+      <div class="sim-head ${cls}">
+        <span class="lvl-pill ${nivel===2?'lvl2':'lvl1'}" style="font-size:12px">Nivel ${nivel} · ${nivel===1?'Deterministic':'LLM Classification'}</span>
+        <span class="mono tsm">${trace}</span>
+      </div>
+      <div class="sim-body">
+        <div class="kv" style="margin-bottom:14px">
+          ${kv('Regla aplicada',ruleTxt)}
+          ${kv('Agente seleccionado',agent?agent.nombre+' ('+agent.id+')':'—')}
+          ${kv('Estado del agente',agent?agent.health:'—')}
+          ${kv('Trace ID',trace)}</div>
+        <div class="kv-k" style="margin-bottom:4px">Motivo de selección</div>
+        <p class="tsm" style="margin-bottom:14px">${motivo}</p>
+        <div class="kv-k" style="margin-bottom:2px">Confidence Score</div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="fw9" style="font-size:18px">${confidence.toFixed(2)}</span><div class="confbar" style="flex:1"><div class="conffill" style="width:${confidence*100}%"></div></div></div>
+      </div>
+    </div>`;
+}
+
+// Buscador global de trace_id (barra superior)
+function globalTraceSearch(e){
+  if(e&&e.key&&e.key!=='Enter')return;
+  const v=(document.getElementById('tb-trace').value||'').trim().toUpperCase();
+  if(!v)return;
+  document.getElementById('tr-q').value=v;
+  goSection('traceability');
+}
+
+// ══════════ TRACEABILITY CENTER (Mejora #3) ══════════
+const FLOW_STATUS_BADGE={ok:'b-green',hitl:'b-amber',down:'b-red',pausa:'b-amber',fallback:'b-purp'};
+function searchTrace(){
+  const q=(document.getElementById('tr-q').value||'').trim().toUpperCase();
+  const t=TRACES[q];const box=document.getElementById('tr-result');
+  if(!t){box.innerHTML='<div class="card"><div class="no-perm">No se encontró el trace_id <code>'+q+'</code>. Prueba TRC-7F3A21, TRC-LEAD88 o TRC-9C0B45.</div></div>';return;}
+  box.innerHTML=`
+  <div class="card">
+    <div class="card-header"><h2>End-to-End Flow · <code>${q}</code></h2><span class="lvl-pill ${t.nivel===2?'lvl2':'lvl1'}">Enrutado en Nivel ${t.nivel}</span></div>
+    <div class="kv" style="margin-bottom:18px">${kv('Intent',t.intent)}${kv('Domain',t.domain)}${kv('Source channel',t.channel)}${kv('Nodos del flujo',t.nodes.length)}</div>
+    <div class="flow">${t.nodes.map(n=>`<div class="flow-node ${n.status==='hitl'?'hitl':n.status==='ok'?'ok':'run'}">
+      <div class="flow-card"><div><div class="fw7">${n.ag} ${n.id!=='—'?`<span class="tsm tmuted mono">${n.id}</span>`:''}</div><div class="tsm tmuted" style="margin-top:2px">${n.d}</div></div>
+        <div class="flow-meta"><span>⏱ <b>${n.ts}</b></span><span>⌛ <b>${n.dur}</b></span><span class="badge ${FLOW_STATUS_BADGE[n.status]||'b-gray'}">${n.status==='hitl'?'HITL':n.status==='ok'?'OK':n.status}</span></div>
+      </div></div>`).join('')}</div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-header"><h2>Handoff Viewer</h2><span class="tsm tmuted">Coordinación A2A</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Source Agent</th><th>Target Agent</th><th>Task</th><th>Status</th><th>Duration</th></tr></thead>
+      <tbody>${t.handoffs.map(h=>`<tr><td class="fw7">${h.src}</td><td class="fw7">${h.tgt}</td><td class="tsm mono">${h.task}</td><td><span class="badge ${FLOW_STATUS_BADGE[h.status]||'b-gray'}">${h.status}</span></td><td class="tsm">${h.dur}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Structured Context</h2><span class="tsm tmuted">Objeto compartido entre agentes</span></div>
+      <div class="code-box">${JSON.stringify(t.ctx,null,2).replace(/"(\w+)":/g,'<span class="key">"$1"</span>:')}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="alert-item ai-info"><span>🔗</span><div><div class="ai-title">Integración con Audit Trail (CU-05 · GOV-03)</div><div class="ai-desc">Este flujo A2A y sus micro-registros se unifican bajo el mismo <code>${q}</code>. ${AUDIT_DATA[q]?`<span class="tlink" onclick="document.getElementById('audit-q').value='${q}';goSection('audit');searchAudit()">Ver decisión de enrutamiento y cierre en el Audit Trail →</span>`:'El Audit Trail conserva la decisión de enrutamiento y la resolución para trazabilidad regulatoria completa.'}</div></div></div>
+  </div>`;
+}
+
+// ── REFRESH GLOBAL ───────────────────────────────────────────────────────────
+function refreshAll(){
+  const c=cnt=>AGENTS.filter(a=>a.estado===cnt).length;
+  document.getElementById('h-total').textContent=AGENTS.length;
+  document.getElementById('h-act').textContent=c('Activo');
+  document.getElementById('h-sbx').textContent=c('Sandbox')+c('Certificado');
+  document.getElementById('h-cat').textContent=AGENTS.length;
+  document.getElementById('h-hitl').textContent=HITL.filter(h=>h.estado==='Pendiente').length;
+  const ap=APPROVALS.filter(a=>a.estado==='Pendiente').length;
+  const ab=document.getElementById('appr-badge');ab.textContent=ap;ab.style.display=ap?'inline-block':'none';
+  // Hub tiles de orquestación
+  const hreg=document.getElementById('h-reg');if(hreg)hreg.textContent=AGENTS.length;
+  const hroute=document.getElementById('h-route');if(hroute)hroute.textContent=(ROUTING_KPI.requests/1000).toFixed(1)+'k';
+  const htrace=document.getElementById('h-trace');if(htrace)htrace.textContent=Object.keys(TRACES).length;
+  if(document.getElementById('sec-catalogo').classList.contains('active'))renderCatalog();
+  if(document.getElementById('sec-dashboard').classList.contains('active'))initDash();
+  if(document.getElementById('sec-log').classList.contains('active'))renderLog();
+  if(document.getElementById('sec-metricas').classList.contains('active'))initMet();
+  if(document.getElementById('sec-aprobaciones').classList.contains('active'))renderApprovals();
+  if(document.getElementById('sec-registry').classList.contains('active'))renderRegistry();
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+fillFilters();applyPerms();changeRole();refreshAll();
+</script>
+</body>
+</html>
